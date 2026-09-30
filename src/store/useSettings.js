@@ -1,0 +1,49 @@
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+/**
+ * @typedef {'system' | 'light' | 'dark'} ThemeMode
+ * @typedef {'system' | 'on' | 'off'} ReduceMotionMode
+ *
+ * @typedef {Object} SettingsState
+ * @property {boolean} sound
+ * @property {boolean} haptics
+ * @property {ThemeMode} theme
+ * @property {boolean} colorblind
+ * @property {ReduceMotionMode} reduceMotion
+ * @property {(sound: boolean) => void} setSound
+ * @property {(haptics: boolean) => void} setHaptics
+ * @property {(theme: ThemeMode) => void} setTheme
+ * @property {(colorblind: boolean) => void} setColorblind
+ * @property {(reduceMotion: ReduceMotionMode) => void} setReduceMotion
+ * @property {(partial: Partial<SettingsState>) => void} updateSettings
+ * @property {() => void} resetSettings
+ */
+
+export const DEFAULT_SETTINGS = {
+  sound: true,
+  haptics: true,
+  theme: 'system',
+  colorblind: false,
+  reduceMotion: 'system',
+};
+
+export const useSettings = create(
+  persist(
+    (set) => ({
+      ...DEFAULT_SETTINGS,
+      setSound: (sound) => set({ sound }),
+      setHaptics: (haptics) => set({ haptics }),
+      setTheme: (theme) => set({ theme }),
+      setColorblind: (colorblind) => set({ colorblind }),
+      setReduceMotion: (reduceMotion) => set({ reduceMotion }),
+      updateSettings: (partial) => set(partial),
+      resetSettings: () => set(DEFAULT_SETTINGS),
+    }),
+    {
+      name: 'gridly-settings',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
