@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -36,7 +36,7 @@ import { canPlace } from '../../engine/board';
  * @param {boolean} [props.reduceMotion=false]
  * @param {Object} props.theme
  */
-export default function HoldSlot({
+function HoldSlot({
   piece,
   slotWidth,
   slotHeight,
@@ -53,8 +53,6 @@ export default function HoldSlot({
   reduceMotion = false,
   theme,
 }) {
-  const [isDraggingState, setIsDraggingState] = useState(false);
-
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const translationX = useSharedValue(0);
@@ -81,41 +79,54 @@ export default function HoldSlot({
     gap
   );
 
+  const pieceKey = piece ? `${piece.id}-${piece.color}` : null;
+  const prevPieceKeyRef = useRef(pieceKey);
+
   useEffect(() => {
-    if (piece) {
-      translateX.value = 0;
-      translateY.value = 0;
-      translationX.value = 0;
-      translationY.value = 0;
-      scale.value = 0.55;
-      pieceOpacity.value = 1;
-      isDragging.value = false;
-      liftProgress.value = 0;
+    if (prevPieceKeyRef.current !== pieceKey) {
+      prevPieceKeyRef.current = pieceKey;
+      if (!isDragging.value) {
+        translateX.value = 0;
+        translateY.value = 0;
+        translationX.value = 0;
+        translationY.value = 0;
+        scale.value = 0.55;
+        pieceOpacity.value = 1;
+        liftProgress.value = 0;
+      }
     }
-  }, [piece]);
+  }, [pieceKey]);
+
+  const onPlaceRef = useRef(onPlace);
+  onPlaceRef.current = onPlace;
+
+  const pieceRef = useRef(piece);
+  pieceRef.current = piece;
+
+  const ghostRef = useRef(ghost);
+  ghostRef.current = ghost;
 
   const checkPlacementJS = (row, col) => {
-    if (!piece) return;
-    const valid = canPlace(boardRef.current, piece, row, col);
+    const currentPiece = pieceRef.current;
+    if (!currentPiece) return;
+    const valid = canPlace(boardRef.current, currentPiece, row, col);
     isValidPlacement.value = valid;
     if (valid) {
       const step = cellSize + gap;
-      ghost.ghostX.value = padding + col * step;
-      ghost.ghostY.value = padding + row * step;
-      ghost.ghostOpacity.value = 0.35;
+      ghostRef.current.ghostX.value = padding + col * step;
+      ghostRef.current.ghostY.value = padding + row * step;
+      ghostRef.current.ghostOpacity.value = 0.35;
     } else {
-      ghost.ghostOpacity.value = 0;
+      ghostRef.current.ghostOpacity.value = 0;
     }
   };
 
   const handleDragBeginJS = (p) => {
-    setIsDraggingState(true);
-    ghost.setActiveGhostPiece(p);
+    ghostRef.current?.setActiveGhostPiece(p);
   };
 
   const handleDragEndJS = () => {
-    setIsDraggingState(false);
-    ghost.setActiveGhostPiece(null);
+    ghostRef.current?.setActiveGhostPiece(null);
   };
 
   const handleDropSuccessJS = (p, row, col) => {
@@ -123,120 +134,156 @@ export default function HoldSlot({
     lastRow.value = -999;
     lastCol.value = -999;
     isValidPlacement.value = false;
-    ghost.ghostOpacity.value = 0;
+    ghostRef.current.ghostOpacity.value = 0;
 
-    setIsDraggingState(false);
-    ghost.setActiveGhostPiece(null);
-    onPlace(p, row, col);
+    ghostRef.current?.setActiveGhostPiece(null);
+    onPlaceRef.current(p, row, col);
   };
 
-  const panGesture = Gesture.Pan()
-    .enabled(Boolean(piece))
-    .onBegin((event) => {
-      'worklet';
-      if (!piece) return;
-      startX.value = event.x;
-      startY.value = event.y;
-      translationX.value = 0;
-      translationY.value = 0;
-      isDragging.value = true;
-      lastRow.value = -999;
-      lastCol.value = -999;
-      isValidPlacement.value = false;
+  const panGesture = useMemo(() => {
+    return Gesture.Pan()
+      .enabled(Boolean(piece))
+      .minDistance(0)
+      .onBegin((event) => {
+        'worklet';
+        if (!piece) return;
+        startX.value = event.x;
+        startY.value = event.y;
+        translationX.value = 0;
+        translationY.value = 0;
+        isDragging.value = true;
+        lastRow.value = -999;
+        lastCol.value = -999;
+        isValidPlacement.value = false;
 
-      // Floating offset relative to rest center: bottom edge sits 1 cell height above touch
-      liftOffsetX.value = event.x - slotWidth / 2;
-      liftOffsetY.value =
-        event.y - cellSize - pieceHeight / 2 - slotHeight / 2;
+        // Floating offset relative to rest center: bottom edge sits 1 cell height above touch
+        liftOffsetX.value = event.x - slotWidth / 2;
+        liftOffsetY.value =
+          event.y - cellSize - pieceHeight / 2 - slotHeight / 2;
 
-      liftProgress.value = 0;
-      liftProgress.value = withTiming(1.0, { duration: pickupDuration });
+        liftProgress.value = 0;
+        liftProgress.value = withTiming(1.0, { duration: pickupDuration });
 
-      runOnJS(handleDragBeginJS)(piece);
-    })
-    .onUpdate((event) => {
-      'worklet';
-      if (!piece || !isDragging.value) return;
+        runOnJS(handleDragBeginJS)(piece);
+      })
+      .onUpdate((event) => {
+        'worklet';
+        if (!piece || !isDragging.value) return;
 
-      translationX.value = event.translationX;
-      translationY.value = event.translationY;
+        translationX.value = event.translationX;
+        translationY.value = event.translationY;
 
-      // Current piece position in slot coordinates
-      const curX =
-        liftOffsetX.value * liftProgress.value + event.translationX;
-      const curY =
-        liftOffsetY.value * liftProgress.value + event.translationY;
+        // Current piece position in slot coordinates
+        const curX =
+          liftOffsetX.value * liftProgress.value + event.translationX;
+        const curY =
+          liftOffsetY.value * liftProgress.value + event.translationY;
 
-      const pieceSlotLeft = (slotWidth - pieceWidth) / 2 + curX;
-      const pieceSlotTop = (slotHeight - pieceHeight) / 2 + curY;
+        const pieceSlotLeft = (slotWidth - pieceWidth) / 2 + curX;
+        const pieceSlotTop = (slotHeight - pieceHeight) / 2 + curY;
 
-      // Top-left of piece relative to board
-      const pieceBoardLeft = slotBoardOffsetX.value + pieceSlotLeft;
-      const pieceBoardTop = slotBoardOffsetY.value + pieceSlotTop;
+        // Top-left of piece relative to board
+        const pieceBoardLeft = slotBoardOffsetX.value + pieceSlotLeft;
+        const pieceBoardTop = slotBoardOffsetY.value + pieceSlotTop;
 
-      const step = cellSize + gap;
-      const col = Math.round((pieceBoardLeft - padding) / step);
-      const row = Math.round((pieceBoardTop - padding) / step);
-
-      if (row !== lastRow.value || col !== lastCol.value) {
-        lastRow.value = row;
-        lastCol.value = col;
-        runOnJS(checkPlacementJS)(row, col);
-      }
-    })
-    .onEnd(() => {
-      'worklet';
-      if (!piece || !isDragging.value) return;
-
-      const curX =
-        liftOffsetX.value * liftProgress.value + translationX.value;
-      const curY =
-        liftOffsetY.value * liftProgress.value + translationY.value;
-      const curScale = 0.55 + 0.45 * liftProgress.value;
-
-      translateX.value = curX;
-      translateY.value = curY;
-      scale.value = curScale;
-      isDragging.value = false;
-
-      if (isValidPlacement.value) {
         const step = cellSize + gap;
-        const snapBoardLeft = padding + lastCol.value * step;
-        const snapBoardTop = padding + lastRow.value * step;
+        const col = Math.round((pieceBoardLeft - padding) / step);
+        const row = Math.round((pieceBoardTop - padding) / step);
 
-        const targetSnapX =
-          snapBoardLeft - slotBoardOffsetX.value - (slotWidth - pieceWidth) / 2;
-        const targetSnapY =
-          snapBoardTop - slotBoardOffsetY.value - (slotHeight - pieceHeight) / 2;
+        if (row !== lastRow.value || col !== lastCol.value) {
+          lastRow.value = row;
+          lastCol.value = col;
+          runOnJS(checkPlacementJS)(row, col);
+        }
+      })
+      .onEnd(() => {
+        'worklet';
+        if (!piece || !isDragging.value) return;
 
-        ghost.ghostOpacity.value = withTiming(0, { duration: snapDuration });
-        scale.value = withTiming(1.0, { duration: snapDuration });
-        translateX.value = withTiming(targetSnapX, { duration: snapDuration });
-        translateY.value = withTiming(
-          targetSnapY,
-          { duration: snapDuration },
-          (finished) => {
-            if (finished) {
-              pieceOpacity.value = 0;
-              runOnJS(handleDropSuccessJS)(
-                piece,
-                lastRow.value,
-                lastCol.value
-              );
+        const curX =
+          liftOffsetX.value * liftProgress.value + translationX.value;
+        const curY =
+          liftOffsetY.value * liftProgress.value + translationY.value;
+        const curScale = 0.55 + 0.45 * liftProgress.value;
+
+        translateX.value = curX;
+        translateY.value = curY;
+        scale.value = curScale;
+        isDragging.value = false;
+
+        if (isValidPlacement.value) {
+          const step = cellSize + gap;
+          const snapBoardLeft = padding + lastCol.value * step;
+          const snapBoardTop = padding + lastRow.value * step;
+
+          const targetSnapX =
+            snapBoardLeft - slotBoardOffsetX.value - (slotWidth - pieceWidth) / 2;
+          const targetSnapY =
+            snapBoardTop - slotBoardOffsetY.value - (slotHeight - pieceHeight) / 2;
+
+          ghost.ghostOpacity.value = withTiming(0, { duration: snapDuration });
+          scale.value = withTiming(1.0, { duration: snapDuration });
+          translateX.value = withTiming(targetSnapX, { duration: snapDuration });
+          translateY.value = withTiming(
+            targetSnapY,
+            { duration: snapDuration },
+            (finished) => {
+              if (finished) {
+                pieceOpacity.value = 0;
+                runOnJS(handleDropSuccessJS)(
+                  piece,
+                  lastRow.value,
+                  lastCol.value
+                );
+              }
             }
-          }
-        );
-      } else {
-        ghost.ghostOpacity.value = 0;
-        translateX.value = withTiming(0, { duration: returnDuration });
-        translateY.value = withTiming(0, { duration: returnDuration });
-        scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
-          if (finished) {
-            runOnJS(handleDragEndJS)();
-          }
-        });
-      }
-    });
+          );
+        } else {
+          ghost.ghostOpacity.value = 0;
+          translateX.value = withTiming(0, { duration: returnDuration });
+          translateY.value = withTiming(0, { duration: returnDuration });
+          scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
+            if (finished) {
+              runOnJS(handleDragEndJS)();
+            }
+          });
+        }
+      })
+      .onFinalize((event, success) => {
+        'worklet';
+        if (!success && isDragging.value) {
+          isDragging.value = false;
+          ghost.ghostOpacity.value = 0;
+          translateX.value = withTiming(0, { duration: returnDuration });
+          translateY.value = withTiming(0, { duration: returnDuration });
+          scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
+            if (finished) {
+              runOnJS(handleDragEndJS)();
+            }
+          });
+        }
+      });
+  }, [
+    pieceKey,
+    slotWidth,
+    slotHeight,
+    cellSize,
+    gap,
+    padding,
+    pieceWidth,
+    pieceHeight,
+    pickupDuration,
+    snapDuration,
+    returnDuration,
+    slotBoardOffsetX,
+    slotBoardOffsetY,
+    ghost,
+  ]);
+
+  const animatedSlotWrapperStyle = useAnimatedStyle(() => ({
+    zIndex: isDragging.value ? 9999 : 1,
+    elevation: isDragging.value ? 9999 : 1,
+  }));
 
   const animatedPieceStyle = useAnimatedStyle(() => {
     let curX;
@@ -270,7 +317,7 @@ export default function HoldSlot({
     };
   });
 
-  const slotOpacity = canHold || isDraggingState ? 1.0 : 0.45;
+  const slotOpacity = canHold ? 1.0 : 0.45;
   const accessibilityLabel = !canHold
     ? 'Hold slot, locked'
     : piece
@@ -279,7 +326,7 @@ export default function HoldSlot({
 
   return (
     <GestureDetector gesture={panGesture}>
-      <View
+      <Animated.View
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         style={[
@@ -288,9 +335,8 @@ export default function HoldSlot({
             width: slotWidth,
             height: slotHeight,
             opacity: slotOpacity,
-            zIndex: isDraggingState ? 9999 : 1,
-            elevation: isDraggingState ? 9999 : 1,
           },
+          animatedSlotWrapperStyle,
         ]}
       >
         {/* Slot Background in theme well color */}
@@ -342,7 +388,7 @@ export default function HoldSlot({
             />
           </Animated.View>
         )}
-      </View>
+      </Animated.View>
     </GestureDetector>
   );
 }
@@ -394,3 +440,6 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
 });
+
+export default React.memo(HoldSlot);
+

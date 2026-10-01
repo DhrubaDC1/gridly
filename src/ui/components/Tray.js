@@ -39,7 +39,7 @@ const TRAY_GAP = 10;
  * @param {(layout: { x: number, y: number, width: number, height: number }) => void} [props.onTrayLayout]
  * @param {any} [props.style]
  */
-export default function Tray({
+function Tray({
   pieces,
   boardSize,
   trayWidth: propTrayWidth,
@@ -163,3 +163,5 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
 });
+
+export default React.memo(Tray);

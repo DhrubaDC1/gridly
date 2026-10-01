@@ -22,9 +22,11 @@ jest.mock('react-native-gesture-handler', () => {
       Pan: () => {
         const pan = {
           enabled: () => pan,
+          minDistance: () => pan,
           onBegin: () => pan,
           onUpdate: () => pan,
           onEnd: () => pan,
+          onFinalize: () => pan,
         };
         return pan;
       },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -36,11 +36,12 @@ import { canPlace } from '../../engine/board';
  * @param {number} [props.holdHeight]
  * @param {boolean} [props.canHold=true]
  * @param {import('react-native-reanimated').SharedValue<boolean>} [props.isHoldHovered]
+ * @param {(slotIndex: number, piece: any, row: number, col: number) => void} props.onPlace
  * @param {(slotIndex: number, piece: any) => void} [props.onHold]
  * @param {boolean} props.reduceMotion
  * @param {Object} props.theme
  */
-export default function TraySlot({
+function TraySlot({
   slotIndex,
   piece,
   slotWidth,
@@ -63,8 +64,6 @@ export default function TraySlot({
   reduceMotion,
   theme,
 }) {
-  const [isDraggingState, setIsDraggingState] = useState(false);
-
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const translationX = useSharedValue(0);
@@ -92,46 +91,62 @@ export default function TraySlot({
     gap
   );
 
-  // When piece prop changes (e.g. new piece in slot or refill), reset state cleanly
+  const pieceKey = piece ? `${piece.id}-${piece.color}` : null;
+  const prevPieceKeyRef = useRef(pieceKey);
+
+  // When piece in this slot changes (e.g. refill or empty after place), reset animation values cleanly
   useEffect(() => {
-    if (piece) {
-      translateX.value = 0;
-      translateY.value = 0;
-      translationX.value = 0;
-      translationY.value = 0;
-      scale.value = 0.55;
-      pieceOpacity.value = 1;
-      isDragging.value = false;
-      liftProgress.value = 0;
-      isOverHoldSlot.value = false;
+    if (prevPieceKeyRef.current !== pieceKey) {
+      prevPieceKeyRef.current = pieceKey;
+      if (!isDragging.value) {
+        translateX.value = 0;
+        translateY.value = 0;
+        translationX.value = 0;
+        translationY.value = 0;
+        scale.value = 0.55;
+        pieceOpacity.value = 1;
+        liftProgress.value = 0;
+        isOverHoldSlot.value = false;
+      }
     }
-  }, [piece]);
+  }, [pieceKey]);
+
+  const onPlaceRef = useRef(onPlace);
+  onPlaceRef.current = onPlace;
+
+  const onHoldRef = useRef(onHold);
+  onHoldRef.current = onHold;
+
+  const pieceRef = useRef(piece);
+  pieceRef.current = piece;
+
+  const ghostRef = useRef(ghost);
+  ghostRef.current = ghost;
 
   const checkPlacementJS = (row, col) => {
-    if (!piece) return;
-    const valid = canPlace(boardRef.current, piece, row, col);
+    const currentPiece = pieceRef.current;
+    if (!currentPiece) return;
+    const valid = canPlace(boardRef.current, currentPiece, row, col);
     isValidPlacement.value = valid;
     if (valid) {
       const step = cellSize + gap;
-      ghost.ghostX.value = padding + col * step;
-      ghost.ghostY.value = padding + row * step;
-      ghost.ghostOpacity.value = 0.35;
+      ghostRef.current.ghostX.value = padding + col * step;
+      ghostRef.current.ghostY.value = padding + row * step;
+      ghostRef.current.ghostOpacity.value = 0.35;
     } else {
-      ghost.ghostOpacity.value = 0;
+      ghostRef.current.ghostOpacity.value = 0;
     }
   };
 
   const handleDragBeginJS = (p) => {
-    setIsDraggingState(true);
-    ghost.setActiveGhostPiece(p);
+    ghostRef.current?.setActiveGhostPiece(p);
   };
 
   const handleDragEndJS = () => {
-    setIsDraggingState(false);
     if (isHoldHovered) {
       isHoldHovered.value = false;
     }
-    ghost.setActiveGhostPiece(null);
+    ghostRef.current?.setActiveGhostPiece(null);
   };
 
   const handleDropSuccessJS = (slotIdx, p, row, col) => {
@@ -139,11 +154,10 @@ export default function TraySlot({
     lastRow.value = -999;
     lastCol.value = -999;
     isValidPlacement.value = false;
-    ghost.ghostOpacity.value = 0;
+    ghostRef.current.ghostOpacity.value = 0;
 
-    setIsDraggingState(false);
-    ghost.setActiveGhostPiece(null);
-    onPlace(slotIdx, p, row, col);
+    ghostRef.current?.setActiveGhostPiece(null);
+    onPlaceRef.current(slotIdx, p, row, col);
   };
 
   const handleHoldSuccessJS = (slotIdx, p) => {
@@ -152,185 +166,229 @@ export default function TraySlot({
     if (isHoldHovered) {
       isHoldHovered.value = false;
     }
-    setIsDraggingState(false);
-    ghost.setActiveGhostPiece(null);
-    onHold?.(slotIdx, p);
+    ghostRef.current?.setActiveGhostPiece(null);
+    onHoldRef.current?.(slotIdx, p);
   };
 
-  const panGesture = Gesture.Pan()
-    .enabled(Boolean(piece))
-    .onBegin((event) => {
-      'worklet';
-      if (!piece) return;
-      startX.value = event.x;
-      startY.value = event.y;
-      translationX.value = 0;
-      translationY.value = 0;
-      isDragging.value = true;
-      isOverHoldSlot.value = false;
-      lastRow.value = -999;
-      lastCol.value = -999;
-      isValidPlacement.value = false;
-
-      // Floating offset relative to rest center: bottom edge sits 1 cell height above touch
-      liftOffsetX.value = event.x - slotWidth / 2;
-      liftOffsetY.value =
-        event.y - cellSize - pieceHeight / 2 - slotHeight / 2;
-
-      // Smoothly animate lift progress from 0 to 1 (piece starts at 0 with zero jump)
-      liftProgress.value = 0;
-      liftProgress.value = withTiming(1.0, { duration: pickupDuration });
-
-      runOnJS(handleDragBeginJS)(piece);
-    })
-    .onUpdate((event) => {
-      'worklet';
-      if (!piece || !isDragging.value) return;
-
-      translationX.value = event.translationX;
-      translationY.value = event.translationY;
-
-      // Current piece position in slot coordinates
-      const curX =
-        liftOffsetX.value * liftProgress.value + event.translationX;
-      const curY =
-        liftOffsetY.value * liftProgress.value + event.translationY;
-
-      const pieceSlotLeft = (slotWidth - pieceWidth) / 2 + curX;
-      const pieceSlotTop = (slotHeight - pieceHeight) / 2 + curY;
-
-      // Check if hovering over hold slot
-      if (canHold && slotHoldOffsetX && isHoldHovered) {
-        const pieceHoldLeft = pieceSlotLeft - slotHoldOffsetX.value;
-        const pieceHoldTop = pieceSlotTop - (slotHoldOffsetY?.value ?? 0);
-        const pieceHoldCenterX = pieceHoldLeft + pieceWidth / 2;
-        const pieceHoldCenterY = pieceHoldTop + pieceHeight / 2;
-
-        const targetHoldWidth = holdWidth ?? slotWidth;
-        const targetHoldHeight = holdHeight ?? slotHeight;
-        const margin = 16;
-        const isOverHold =
-          pieceHoldCenterX >= -margin &&
-          pieceHoldCenterX <= targetHoldWidth + margin &&
-          pieceHoldCenterY >= -margin &&
-          pieceHoldCenterY <= targetHoldHeight + margin;
-
-        if (isOverHold) {
-          if (!isOverHoldSlot.value) {
-            isOverHoldSlot.value = true;
-            isHoldHovered.value = true;
-          }
-          isValidPlacement.value = false;
-          ghost.ghostOpacity.value = 0;
-          return;
-        } else if (isOverHoldSlot.value) {
-          isOverHoldSlot.value = false;
-          isHoldHovered.value = false;
-        }
-      }
-
-      // Top-left of piece relative to board
-      const pieceBoardLeft = slotBoardOffsetX.value + pieceSlotLeft;
-      const pieceBoardTop = slotBoardOffsetY.value + pieceSlotTop;
-
-      const step = cellSize + gap;
-      const col = Math.round((pieceBoardLeft - padding) / step);
-      const row = Math.round((pieceBoardTop - padding) / step);
-
-      if (row !== lastRow.value || col !== lastCol.value) {
-        lastRow.value = row;
-        lastCol.value = col;
-        runOnJS(checkPlacementJS)(row, col);
-      }
-    })
-    .onEnd(() => {
-      'worklet';
-      if (!piece || !isDragging.value) return;
-
-      const curX =
-        liftOffsetX.value * liftProgress.value + translationX.value;
-      const curY =
-        liftOffsetY.value * liftProgress.value + translationY.value;
-      const curScale = 0.55 + 0.45 * liftProgress.value;
-
-      translateX.value = curX;
-      translateY.value = curY;
-      scale.value = curScale;
-      isDragging.value = false;
-
-      if (isOverHoldSlot.value && onHold && slotHoldOffsetX) {
+  const panGesture = useMemo(() => {
+    return Gesture.Pan()
+      .enabled(Boolean(piece))
+      .minDistance(0)
+      .onBegin((event) => {
+        'worklet';
+        if (!piece) return;
+        startX.value = event.x;
+        startY.value = event.y;
+        translationX.value = 0;
+        translationY.value = 0;
+        isDragging.value = true;
         isOverHoldSlot.value = false;
-        if (isHoldHovered) {
-          isHoldHovered.value = false;
+        lastRow.value = -999;
+        lastCol.value = -999;
+        isValidPlacement.value = false;
+
+        // Floating offset relative to rest center: bottom edge sits 1 cell height above touch
+        liftOffsetX.value = event.x - slotWidth / 2;
+        liftOffsetY.value =
+          event.y - cellSize - pieceHeight / 2 - slotHeight / 2;
+
+        // Smoothly animate lift progress from 0 to 1 (piece starts at 0 with zero jump)
+        liftProgress.value = 0;
+        liftProgress.value = withTiming(1.0, { duration: pickupDuration });
+
+        runOnJS(handleDragBeginJS)(piece);
+      })
+      .onUpdate((event) => {
+        'worklet';
+        if (!piece || !isDragging.value) return;
+
+        translationX.value = event.translationX;
+        translationY.value = event.translationY;
+
+        // Current piece position in slot coordinates
+        const curX =
+          liftOffsetX.value * liftProgress.value + event.translationX;
+        const curY =
+          liftOffsetY.value * liftProgress.value + event.translationY;
+
+        const pieceSlotLeft = (slotWidth - pieceWidth) / 2 + curX;
+        const pieceSlotTop = (slotHeight - pieceHeight) / 2 + curY;
+
+        // Check if hovering over hold slot
+        if (canHold && slotHoldOffsetX && isHoldHovered) {
+          const pieceHoldLeft = pieceSlotLeft - slotHoldOffsetX.value;
+          const pieceHoldTop = pieceSlotTop - (slotHoldOffsetY?.value ?? 0);
+          const pieceHoldCenterX = pieceHoldLeft + pieceWidth / 2;
+          const pieceHoldCenterY = pieceHoldTop + pieceHeight / 2;
+
+          const targetHoldWidth = holdWidth ?? slotWidth;
+          const targetHoldHeight = holdHeight ?? slotHeight;
+          const margin = 16;
+          const isOverHold =
+            pieceHoldCenterX >= -margin &&
+            pieceHoldCenterX <= targetHoldWidth + margin &&
+            pieceHoldCenterY >= -margin &&
+            pieceHoldCenterY <= targetHoldHeight + margin;
+
+          if (isOverHold) {
+            if (!isOverHoldSlot.value) {
+              isOverHoldSlot.value = true;
+              isHoldHovered.value = true;
+            }
+            isValidPlacement.value = false;
+            ghost.ghostOpacity.value = 0;
+            return;
+          } else if (isOverHoldSlot.value) {
+            isOverHoldSlot.value = false;
+            isHoldHovered.value = false;
+          }
         }
 
-        const targetHoldWidth = holdWidth ?? slotWidth;
-        const targetHoldHeight = holdHeight ?? slotHeight;
-        const targetSnapX =
-          slotHoldOffsetX.value + (targetHoldWidth - pieceWidth) / 2;
-        const targetSnapY =
-          (slotHoldOffsetY?.value ?? 0) + (targetHoldHeight - pieceHeight) / 2;
+        // Top-left of piece relative to board
+        const pieceBoardLeft = slotBoardOffsetX.value + pieceSlotLeft;
+        const pieceBoardTop = slotBoardOffsetY.value + pieceSlotTop;
 
-        ghost.ghostOpacity.value = 0;
-        scale.value = withTiming(0.55, { duration: snapDuration });
-        translateX.value = withTiming(targetSnapX, { duration: snapDuration });
-        translateY.value = withTiming(
-          targetSnapY,
-          { duration: snapDuration },
-          (finished) => {
-            if (finished) {
-              pieceOpacity.value = 0;
-              runOnJS(handleHoldSuccessJS)(slotIndex, piece);
-            }
-          }
-        );
-        return;
-      }
-
-      if (isValidPlacement.value) {
         const step = cellSize + gap;
-        const snapBoardLeft = padding + lastCol.value * step;
-        const snapBoardTop = padding + lastRow.value * step;
+        const col = Math.round((pieceBoardLeft - padding) / step);
+        const row = Math.round((pieceBoardTop - padding) / step);
 
-        const targetSnapX =
-          snapBoardLeft - slotBoardOffsetX.value - (slotWidth - pieceWidth) / 2;
-        const targetSnapY =
-          snapBoardTop - slotBoardOffsetY.value - (slotHeight - pieceHeight) / 2;
-
-        ghost.ghostOpacity.value = withTiming(0, { duration: snapDuration });
-        scale.value = withTiming(1.0, { duration: snapDuration });
-        translateX.value = withTiming(targetSnapX, { duration: snapDuration });
-        translateY.value = withTiming(
-          targetSnapY,
-          { duration: snapDuration },
-          (finished) => {
-            if (finished) {
-              // Hide piece immediately so it never flashes back in the tray deck
-              pieceOpacity.value = 0;
-              runOnJS(handleDropSuccessJS)(
-                slotIndex,
-                piece,
-                lastRow.value,
-                lastCol.value
-              );
-            }
-          }
-        );
-      } else {
-        if (isHoldHovered) {
-          isHoldHovered.value = false;
+        if (row !== lastRow.value || col !== lastCol.value) {
+          lastRow.value = row;
+          lastCol.value = col;
+          runOnJS(checkPlacementJS)(row, col);
         }
-        isOverHoldSlot.value = false;
-        ghost.ghostOpacity.value = 0;
-        translateX.value = withTiming(0, { duration: returnDuration });
-        translateY.value = withTiming(0, { duration: returnDuration });
-        scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
-          if (finished) {
-            runOnJS(handleDragEndJS)();
+      })
+      .onEnd(() => {
+        'worklet';
+        if (!piece || !isDragging.value) return;
+
+        const curX =
+          liftOffsetX.value * liftProgress.value + translationX.value;
+        const curY =
+          liftOffsetY.value * liftProgress.value + translationY.value;
+        const curScale = 0.55 + 0.45 * liftProgress.value;
+
+        translateX.value = curX;
+        translateY.value = curY;
+        scale.value = curScale;
+        isDragging.value = false;
+
+        if (isOverHoldSlot.value && slotHoldOffsetX) {
+          isOverHoldSlot.value = false;
+          if (isHoldHovered) {
+            isHoldHovered.value = false;
           }
-        });
-      }
-    });
+
+          const targetHoldWidth = holdWidth ?? slotWidth;
+          const targetHoldHeight = holdHeight ?? slotHeight;
+          const targetSnapX =
+            slotHoldOffsetX.value + (targetHoldWidth - pieceWidth) / 2;
+          const targetSnapY =
+            (slotHoldOffsetY?.value ?? 0) + (targetHoldHeight - pieceHeight) / 2;
+
+          ghost.ghostOpacity.value = 0;
+          scale.value = withTiming(0.55, { duration: snapDuration });
+          translateX.value = withTiming(targetSnapX, { duration: snapDuration });
+          translateY.value = withTiming(
+            targetSnapY,
+            { duration: snapDuration },
+            (finished) => {
+              if (finished) {
+                pieceOpacity.value = 0;
+                runOnJS(handleHoldSuccessJS)(slotIndex, piece);
+              }
+            }
+          );
+          return;
+        }
+
+        if (isValidPlacement.value) {
+          const step = cellSize + gap;
+          const snapBoardLeft = padding + lastCol.value * step;
+          const snapBoardTop = padding + lastRow.value * step;
+
+          const targetSnapX =
+            snapBoardLeft - slotBoardOffsetX.value - (slotWidth - pieceWidth) / 2;
+          const targetSnapY =
+            snapBoardTop - slotBoardOffsetY.value - (slotHeight - pieceHeight) / 2;
+
+          ghost.ghostOpacity.value = withTiming(0, { duration: snapDuration });
+          scale.value = withTiming(1.0, { duration: snapDuration });
+          translateX.value = withTiming(targetSnapX, { duration: snapDuration });
+          translateY.value = withTiming(
+            targetSnapY,
+            { duration: snapDuration },
+            (finished) => {
+              if (finished) {
+                // Hide piece immediately so it never flashes back in the tray deck
+                pieceOpacity.value = 0;
+                runOnJS(handleDropSuccessJS)(
+                  slotIndex,
+                  piece,
+                  lastRow.value,
+                  lastCol.value
+                );
+              }
+            }
+          );
+        } else {
+          if (isHoldHovered) {
+            isHoldHovered.value = false;
+          }
+          isOverHoldSlot.value = false;
+          ghost.ghostOpacity.value = 0;
+          translateX.value = withTiming(0, { duration: returnDuration });
+          translateY.value = withTiming(0, { duration: returnDuration });
+          scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
+            if (finished) {
+              runOnJS(handleDragEndJS)();
+            }
+          });
+        }
+      })
+      .onFinalize((event, success) => {
+        'worklet';
+        if (!success && isDragging.value) {
+          isDragging.value = false;
+          isOverHoldSlot.value = false;
+          ghost.ghostOpacity.value = 0;
+          translateX.value = withTiming(0, { duration: returnDuration });
+          translateY.value = withTiming(0, { duration: returnDuration });
+          scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
+            if (finished) {
+              runOnJS(handleDragEndJS)();
+            }
+          });
+        }
+      });
+  }, [
+    pieceKey,
+    slotIndex,
+    slotWidth,
+    slotHeight,
+    cellSize,
+    gap,
+    padding,
+    pieceWidth,
+    pieceHeight,
+    canHold,
+    holdWidth,
+    holdHeight,
+    pickupDuration,
+    snapDuration,
+    returnDuration,
+    slotBoardOffsetX,
+    slotBoardOffsetY,
+    slotHoldOffsetX,
+    slotHoldOffsetY,
+    isHoldHovered,
+    ghost,
+  ]);
+
+  const animatedSlotWrapperStyle = useAnimatedStyle(() => ({
+    zIndex: isDragging.value ? 9999 : 1,
+    elevation: isDragging.value ? 9999 : 1,
+  }));
 
   const animatedPieceStyle = useAnimatedStyle(() => {
     let curX;
@@ -359,15 +417,14 @@ export default function TraySlot({
 
   return (
     <GestureDetector gesture={panGesture}>
-      <View
+      <Animated.View
         style={[
           styles.slotWrapper,
           {
             width: slotWidth,
             height: slotHeight,
-            zIndex: isDraggingState ? 9999 : 1,
-            elevation: isDraggingState ? 9999 : 1,
           },
+          animatedSlotWrapperStyle,
         ]}
       >
         <View
@@ -389,7 +446,7 @@ export default function TraySlot({
             />
           </Animated.View>
         )}
-      </View>
+      </Animated.View>
     </GestureDetector>
   );
 }
@@ -414,3 +471,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+export default React.memo(TraySlot);
+
