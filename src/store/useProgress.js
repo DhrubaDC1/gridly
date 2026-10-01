@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createStats } from '../engine/stats';
 
 /**
  * @typedef {Object} ModeStats
@@ -39,28 +40,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * @property {string} updatedAt - ISO timestamp
  */
 
-export const INITIAL_STATS = {
-  gamesPlayed: {
-    classic: 0,
-    blitz: 0,
-    adventure: 0,
-  },
-  bestScore: {
-    classic: 0,
-    blitz: 0,
-    adventure: 0,
-  },
-  totalLinesCleared: 0,
-  bestCombo: 0,
-  perfectClears: 0,
-  monoLines: 0,
-  totalPiecesPlaced: 0,
-  holdsUsed: 0,
-  totalPlayTime: 0,
-  currentStreak: 0,
-  bestStreak: 0,
-  lastPlayedDay: null,
-};
+export const INITIAL_STATS = createStats();
 
 export const INITIAL_PROGRESS = {
   version: 1,
@@ -156,6 +136,7 @@ export const useProgress = create(
       resetProgress: () =>
         set({
           ...INITIAL_PROGRESS,
+          stats: createStats(),
           updatedAt: new Date().toISOString(),
         }),
     }),
