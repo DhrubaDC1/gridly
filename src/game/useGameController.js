@@ -12,6 +12,11 @@ import {
   placeBlitz,
   tick as blitzTick,
 } from '../engine/modes/blitz';
+import {
+  createAdventureGame,
+  placeAdventure,
+} from '../engine/modes/adventure';
+import levelsData from '../../assets/levels/levels.json';
 import { calculateElapsed } from './timer';
 import { evaluate } from '../engine/achievements';
 import { applyGameResult } from '../engine/stats';
@@ -49,6 +54,8 @@ export function createGameController(options = {}) {
   const {
     seed: initialSeed,
     mode = 'classic',
+    level: initialLevel = null,
+    levelId: initialLevelId = null,
     initialState = null,
     persist: persistOption = true,
     initial: customInitial = null,
@@ -57,9 +64,26 @@ export function createGameController(options = {}) {
     autoStartTimer = true,
   } = options;
 
-  const persist = mode === 'blitz' ? false : persistOption;
+  const persist = mode === 'blitz' || mode === 'adventure' ? false : persistOption;
   const now = typeof customNow === 'function' ? customNow : () => Date.now();
   const fb = customFeedback || { onAchievement };
+
+  let levelData = null;
+  if (mode === 'adventure') {
+    const levelArg = initialLevel ?? initialLevelId ?? 1;
+    if (typeof levelArg === 'object' && levelArg !== null) {
+      levelData = levelArg;
+    } else {
+      const numericId = parseInt(levelArg, 10) || 1;
+      levelData =
+        levelsData.find((lvl) => lvl.id === numericId) || {
+          id: numericId,
+          seed: 1000 + numericId,
+          board: [],
+          goals: [],
+        };
+    }
+  }
 
   let state = null;
   let clearing = null;
@@ -98,10 +122,18 @@ export function createGameController(options = {}) {
         initial = SCRIPTED_INITIAL_STATE;
       }
     }
-    const seed = typeof initialSeed === 'number' ? initialSeed : generateSeed();
-    state = mode === 'blitz'
-      ? createBlitzGame({ seed, initial })
-      : createGame({ seed, mode, initial });
+    const seed =
+      typeof initialSeed === 'number'
+        ? initialSeed
+        : mode === 'adventure' && typeof levelData?.seed === 'number'
+        ? levelData.seed
+        : generateSeed();
+    state =
+      mode === 'blitz'
+        ? createBlitzGame({ seed, initial })
+        : mode === 'adventure'
+        ? createAdventureGame(levelData, { seed, initial })
+        : createGame({ seed, mode, initial });
     hasHandledGameOver = Boolean(state.over);
   }
 
@@ -203,12 +235,31 @@ export function createGameController(options = {}) {
     };
     useProgress.getState().setStats({ ...nextStats, scoreTotals });
 
+    const isCompleted = Boolean(
+      finalState.completed || finalState.overReason === 'levelComplete'
+    );
+    const completedLevelId = finalState.levelId ?? finalState.level;
+
+    if (finalState.mode === 'adventure' && isCompleted) {
+      useProgress.getState().setAdventureProgress({
+        levelId: completedLevelId,
+        unlocked: completedLevelId + 1,
+        stars: finalState.stars,
+        score: finalState.score,
+      });
+    }
+
     const currentUnlocked = useProgress.getState().achievements;
+    const currentAdventure = useProgress.getState().adventure;
     const statUnlocked = evaluate([], nextStats, {
       unlocked: currentUnlocked,
       mode: finalState.mode || mode,
       score: finalState.score,
-      adventureLevel: null,
+      adventureLevel:
+        finalState.mode === 'adventure' && isCompleted
+          ? completedLevelId
+          : null,
+      adventure: currentAdventure,
     });
     unlockAchievements(statUnlocked);
   }
@@ -301,6 +352,8 @@ export function createGameController(options = {}) {
     const result =
       mode === 'blitz'
         ? placeBlitz(state, source, row, col, now())
+        : mode === 'adventure'
+        ? placeAdventure(state, source, row, col)
         : placePiece(state, source, row, col);
     if (result.state === state || result.events.length === 0) {
       return false;
@@ -316,20 +369,46 @@ export function createGameController(options = {}) {
       useSettings.getState().setSeenOnboarding(true);
     }
 
+    const isCompleted = Boolean(
+      result.state.completed || result.state.overReason === 'levelComplete'
+    );
+    const completedLevelId = result.state.levelId ?? result.state.level;
+
+    if (result.state.mode === 'adventure' && isCompleted) {
+      useProgress.getState().setAdventureProgress({
+        levelId: completedLevelId,
+        unlocked: completedLevelId + 1,
+        stars: result.state.stars,
+        score: result.state.score,
+      });
+    }
+
     // 1. Evaluate achievements after successful place()
     const currentStats = useProgress.getState().stats;
     const currentUnlocked = useProgress.getState().achievements;
+    const currentAdventure = useProgress.getState().adventure;
     const newlyUnlocked = evaluate(result.events, currentStats, {
       unlocked: currentUnlocked,
       mode: state.mode || mode,
       score: state.score,
-      adventureLevel: null,
+      adventureLevel:
+        result.state.mode === 'adventure' && isCompleted
+          ? completedLevelId
+          : null,
+      adventure: currentAdventure,
     });
     unlockAchievements(newlyUnlocked);
 
     notifyState();
     notifyEvents(result.events);
-    playFeedbackForEvents(result.events.filter((e) => e.type !== 'gameOver'));
+    playFeedbackForEvents(
+      result.events.filter(
+        (e) => e.type !== 'gameOver' && e.type !== 'levelComplete'
+      )
+    );
+    if (isCompleted) {
+      (fb.onAchievement || onAchievement)();
+    }
     syncPersistence();
 
     // 2. When a game ends, apply game result and evaluate stat-based achievements
@@ -372,10 +451,17 @@ export function createGameController(options = {}) {
    */
   function restart(newSeed) {
     stopTimer();
-    const seed = typeof newSeed === 'number' ? newSeed : generateSeed();
+    const seed =
+      typeof newSeed === 'number'
+        ? newSeed
+        : mode === 'adventure' && typeof levelData?.seed === 'number'
+        ? levelData.seed
+        : generateSeed();
     state =
       mode === 'blitz'
         ? createBlitzGame({ seed })
+        : mode === 'adventure'
+        ? createAdventureGame(levelData, { seed })
         : createGame({ seed, mode });
     clearing = null;
     accumulatedDurationMs = 0;

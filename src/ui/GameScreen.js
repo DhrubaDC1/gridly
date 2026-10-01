@@ -31,15 +31,22 @@ import { useProgress } from '../store/useProgress';
 import { useSettings } from '../store/useSettings';
 import { onPickup } from '../services/feedback';
 import { calculateTimerRatio, getRemainingSeconds } from '../game/timer';
+import { buildGoalChipText } from '../game/adventureProgress';
+import levelsData from '../../assets/levels/levels.json';
 
 /**
  * Shared game UI component for Classic, Blitz, and other modes.
  *
  * @param {Object} props
- * @param {string} [props.mode='classic'] - Game mode ('classic' | 'blitz').
+ * @param {string} [props.mode='classic'] - Game mode ('classic' | 'blitz' | 'adventure').
  * @param {string} [props.title] - Optional custom header title override.
+ * @param {number | Object} [props.level] - Optional level id or level config for Adventure mode.
  */
-export default function GameScreen({ mode = 'classic', title: customTitle }) {
+export default function GameScreen({
+  mode = 'classic',
+  title: customTitle,
+  level: levelProp,
+}) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -57,7 +64,7 @@ export default function GameScreen({ mode = 'classic', title: customTitle }) {
     isPaused,
     pause,
     resume,
-  } = useGameController({ mode });
+  } = useGameController({ mode, level: levelProp });
 
   const savedBestScore = useProgress(
     (s) => s.stats?.bestScore?.[mode] ?? 0
@@ -234,7 +241,25 @@ export default function GameScreen({ mode = 'classic', title: customTitle }) {
 
   const handleQuit = useCallback(() => {
     resume();
-    router.replace('/');
+    router.replace(mode === 'adventure' ? '/adventure' : '/');
+  }, [mode, resume, router]);
+
+  const handleNextLevel = useCallback(() => {
+    resume();
+    const currentId =
+      state.levelId ?? state.level ?? (typeof levelProp === 'number' ? levelProp : 1);
+    const nextId = currentId + 1;
+    const hasNext = levelsData.some((lvl) => lvl.id === nextId);
+    if (hasNext) {
+      router.replace(`/adventure/${nextId}`);
+    } else {
+      router.replace('/adventure');
+    }
+  }, [state.levelId, state.level, levelProp, resume, router]);
+
+  const handleMap = useCallback(() => {
+    resume();
+    router.replace('/adventure');
   }, [resume, router]);
 
   const showHandHint =
@@ -277,7 +302,13 @@ export default function GameScreen({ mode = 'classic', title: customTitle }) {
     metrics,
   ]);
 
-  const headerTitle = customTitle || (mode === 'blitz' ? 'Blitz' : 'Classic');
+  const headerTitle =
+    customTitle ||
+    (mode === 'blitz'
+      ? 'Blitz'
+      : mode === 'adventure'
+      ? `Level ${state.levelId ?? state.level ?? levelProp ?? 1}`
+      : 'Classic');
 
   return (
     <View
@@ -342,9 +373,80 @@ export default function GameScreen({ mode = 'classic', title: customTitle }) {
       {/* Score Section */}
       <View style={styles.scoreContainer}>
         <ScoreTicker score={state.score} />
-        <Text style={[styles.bestScore, { color: theme.inkMuted }]}>
-          best {bestScore.toLocaleString()}
-        </Text>
+        {mode === 'adventure' ? (
+          <View style={styles.adventureGoalsContainer} testID="adventure-goals">
+            <View style={styles.goalChipsRow}>
+              {(state.goals || []).map((goal, idx) => {
+                const chipText = buildGoalChipText(goal);
+                return (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.goalChip,
+                      {
+                        backgroundColor: goal.completed
+                          ? theme.well
+                          : theme.surface,
+                        borderColor: goal.completed
+                          ? theme.accent
+                          : theme.cellEmpty,
+                      },
+                    ]}
+                    accessibilityRole="text"
+                    accessibilityLabel={chipText}
+                  >
+                    <Text
+                      style={[
+                        styles.goalChipText,
+                        {
+                          color: goal.completed ? theme.accent : theme.ink,
+                          fontFamily: goal.completed
+                            ? 'Figtree_600SemiBold'
+                            : 'Figtree_500Medium',
+                        },
+                      ]}
+                    >
+                      {chipText}
+                    </Text>
+                  </View>
+                );
+              })}
+              {typeof state.movesLeft === 'number' && (
+                <View
+                  style={[
+                    styles.goalChip,
+                    {
+                      backgroundColor: theme.surface,
+                      borderColor:
+                        state.movesLeft <= 3 ? '#E05D5D' : theme.cellEmpty,
+                    },
+                  ]}
+                  accessibilityRole="text"
+                  accessibilityLabel={`${state.movesLeft} moves left`}
+                >
+                  <Text
+                    style={[
+                      styles.goalChipText,
+                      {
+                        color:
+                          state.movesLeft <= 3 ? '#E05D5D' : theme.inkMuted,
+                        fontFamily: 'Figtree_600SemiBold',
+                      },
+                    ]}
+                  >
+                    {`${state.movesLeft} ${
+                      state.movesLeft === 1 ? 'move' : 'moves'
+                    }`}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        ) : (
+          <Text style={[styles.bestScore, { color: theme.inkMuted }]}>
+            best {bestScore.toLocaleString()}
+          </Text>
+        )}
       </View>
 
       {/* Hero Board - Dimmed while paused */}
@@ -453,10 +555,14 @@ export default function GameScreen({ mode = 'classic', title: customTitle }) {
         mode={mode}
         overReason={state.overReason}
         score={state.score}
+        stars={state.stars}
         stats={state.stats}
         previousBestScore={savedBestScore}
         onPlayAgain={handleRestart}
         onHome={handleQuit}
+        onNextLevel={handleNextLevel}
+        onReplay={handleRestart}
+        onMap={handleMap}
         theme={theme}
       />
     </View>
@@ -538,5 +644,27 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     position: 'relative',
     zIndex: 100,
+  },
+  adventureGoalsContainer: {
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  goalChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  goalChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goalChipText: {
+    fontSize: 13,
   },
 });

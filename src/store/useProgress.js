@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createStats } from '../engine/stats';
+import { calculateAdventureProgress } from '../game/adventureProgress';
 
 /**
  * @typedef {Object} ModeStats
@@ -90,30 +91,15 @@ export const useProgress = create(
         }),
 
       setAdventureProgress: ({ unlocked, levelId, stars, score }) =>
-        set((state) => {
-          const nextAdventure = { ...state.adventure };
-          if (typeof unlocked === 'number') {
-            nextAdventure.unlocked = Math.max(state.adventure.unlocked, unlocked);
-          }
-          if (levelId !== undefined) {
-            if (typeof stars === 'number') {
-              nextAdventure.stars = {
-                ...nextAdventure.stars,
-                [levelId]: Math.max(nextAdventure.stars[levelId] || 0, stars),
-              };
-            }
-            if (typeof score === 'number') {
-              nextAdventure.best = {
-                ...nextAdventure.best,
-                [levelId]: Math.max(nextAdventure.best[levelId] || 0, score),
-              };
-            }
-          }
-          return {
-            adventure: nextAdventure,
-            updatedAt: new Date().toISOString(),
-          };
-        }),
+        set((state) => ({
+          adventure: calculateAdventureProgress(state.adventure, {
+            unlocked,
+            levelId,
+            stars,
+            score,
+          }),
+          updatedAt: new Date().toISOString(),
+        })),
 
       setInProgress: (mode, gameState) =>
         set((state) => ({

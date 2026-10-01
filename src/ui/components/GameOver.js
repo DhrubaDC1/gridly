@@ -7,6 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from '../theme';
 import useReduceMotion from '../useReduceMotion';
+import StarRow from './StarRow';
 import { useProgress } from '../../store/useProgress';
 import * as defaultFeedback from '../../services/feedback';
 import { getHighlightStat } from '../../game/statsHighlight';
@@ -21,16 +22,22 @@ import { getHighlightStat } from '../../game/statsHighlight';
  * 4. Animated card fading and rising over 250ms (fade only with Reduce Motion),
  *    triggering feedback.onGameOver once.
  * 5. Updates best Classic score in useProgress once per game and clears inProgress.classic.
+ * 6. Adventure mode: shows levelComplete result card (stars, Next level, Replay, Map)
+ *    or failure card (Out of moves / No moves left, Try again, Map).
  *
  * @param {Object} props
  * @param {boolean} [props.visible=true]
  * @param {number} [props.score=0]
+ * @param {number} [props.stars=0]
  * @param {Object | null} [props.stats]
  * @param {number} [props.previousBestScore]
  * @param {() => void} [props.onPlayAgain]
  * @param {() => void} [props.onRestart]
  * @param {() => void} [props.onHome]
  * @param {() => void} [props.onQuit]
+ * @param {() => void} [props.onNextLevel]
+ * @param {() => void} [props.onReplay]
+ * @param {() => void} [props.onMap]
  * @param {boolean} [props.reduceMotion]
  * @param {string} [props.mode='classic']
  * @param {string | null} [props.overReason]
@@ -42,12 +49,16 @@ export default function GameOver({
   mode = 'classic',
   overReason = null,
   score = 0,
+  stars = 0,
   stats = null,
   previousBestScore,
   onPlayAgain,
   onRestart,
   onHome,
   onQuit,
+  onNextLevel,
+  onReplay,
+  onMap,
   reduceMotion: reduceMotionProp,
   theme: customTheme,
   feedback: customFeedback,
@@ -122,8 +133,11 @@ export default function GameOver({
     if (!hasProcessedRef.current) {
       hasProcessedRef.current = true;
 
-      // 4. Call feedback.onGameOver once
-      feedback?.onGameOver?.();
+      if (modeKey === 'adventure' && overReason === 'levelComplete') {
+        (feedback?.onAchievement || feedback?.onGameOver)?.();
+      } else {
+        feedback?.onGameOver?.();
+      }
 
       // 5. Update best score once per game and clear inProgress for classic
       const progress = useProgress.getState();
@@ -140,7 +154,7 @@ export default function GameOver({
         progress.clearInProgress('classic');
       }
     }
-  }, [visible, score, feedback, modeKey]);
+  }, [visible, score, feedback, modeKey, overReason]);
 
   const animatedCardStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -151,7 +165,15 @@ export default function GameOver({
     return null;
   }
 
-  const title = overReason === 'timeUp' ? "Time's up" : 'Game over';
+  const isAdventure = modeKey === 'adventure';
+  const isLevelComplete = isAdventure && overReason === 'levelComplete';
+
+  let defaultTitle = 'Game over';
+  if (overReason === 'timeUp') {
+    defaultTitle = "Time's up";
+  } else if (isAdventure) {
+    defaultTitle = overReason === 'noMoves' ? 'No moves left' : 'Out of moves';
+  }
 
   return (
     <View style={styles.overlay} testID="game-over-overlay">
@@ -163,74 +185,197 @@ export default function GameOver({
         ]}
         testID="game-over-card"
       >
-        <Text style={[styles.title, { color: theme.ink }]}>{title}</Text>
+        {isLevelComplete ? (
+          <>
+            <Text style={[styles.title, { color: theme.ink }]}>Level complete</Text>
 
-        <Text
-          style={[styles.score, { color: theme.ink }]}
-          accessibilityRole="text"
-          accessibilityLabel={`Final score: ${score}`}
-        >
-          {score.toLocaleString()}
-        </Text>
+            <View style={styles.starsContainer}>
+              <StarRow stars={stars} size={28} gap={8} theme={theme} />
+            </View>
 
-        <Text
-          style={[styles.bestScore, { color: theme.inkMuted }]}
-          accessibilityRole="text"
-          accessibilityLabel={`Best score: ${displayBest}`}
-        >
-          {`best ${displayBest.toLocaleString()}`}
-        </Text>
+            <Text
+              style={[styles.score, { color: theme.ink }]}
+              accessibilityRole="text"
+              accessibilityLabel={`Final score: ${score}`}
+            >
+              {score.toLocaleString()}
+            </Text>
 
-        {isNewBest && (
-          <Text
-            style={[styles.newBest, { color: theme.accent }]}
-            accessibilityRole="text"
-            accessibilityLabel="New best"
-            testID="new-best-label"
-          >
-            New best
-          </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Next level"
+              style={({ pressed }) => [
+                styles.primaryButton,
+                {
+                  backgroundColor: theme.accent,
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+              onPress={onNextLevel || handlePlayAgain}
+            >
+              <Text style={styles.primaryButtonText}>Next level</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Replay"
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: theme.well,
+                  opacity: pressed ? 0.85 : 1,
+                  marginBottom: 8,
+                },
+              ]}
+              onPress={onReplay || handlePlayAgain}
+            >
+              <Text style={[styles.secondaryButtonText, { color: theme.ink }]}>
+                Replay
+              </Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Map"
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+              onPress={onMap || handleHome}
+            >
+              <Text style={[styles.secondaryButtonText, { color: theme.inkMuted }]}>
+                Map
+              </Text>
+            </Pressable>
+          </>
+        ) : isAdventure ? (
+          <>
+            <Text style={[styles.title, { color: theme.ink }]}>
+              {overReason === 'noMoves' ? 'No moves left' : 'Out of moves'}
+            </Text>
+
+            <Text
+              style={[styles.score, { color: theme.ink }]}
+              accessibilityRole="text"
+              accessibilityLabel={`Final score: ${score}`}
+            >
+              {score.toLocaleString()}
+            </Text>
+
+            <Text
+              style={[styles.highlight, { color: theme.inkMuted }]}
+              accessibilityRole="text"
+              accessibilityLabel={highlightText}
+              testID="game-over-highlight"
+            >
+              {highlightText}
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Try again"
+              style={({ pressed }) => [
+                styles.primaryButton,
+                {
+                  backgroundColor: theme.accent,
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+              onPress={handlePlayAgain}
+            >
+              <Text style={styles.primaryButtonText}>Try again</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Map"
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+              onPress={onMap || handleHome}
+            >
+              <Text style={[styles.secondaryButtonText, { color: theme.inkMuted }]}>
+                Map
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={[styles.title, { color: theme.ink }]}>{defaultTitle}</Text>
+
+            <Text
+              style={[styles.score, { color: theme.ink }]}
+              accessibilityRole="text"
+              accessibilityLabel={`Final score: ${score}`}
+            >
+              {score.toLocaleString()}
+            </Text>
+
+            <Text
+              style={[styles.bestScore, { color: theme.inkMuted }]}
+              accessibilityRole="text"
+              accessibilityLabel={`Best score: ${displayBest}`}
+            >
+              {`best ${displayBest.toLocaleString()}`}
+            </Text>
+
+            {isNewBest && (
+              <Text
+                style={[styles.newBest, { color: theme.accent }]}
+                accessibilityRole="text"
+                accessibilityLabel="New best"
+                testID="new-best-label"
+              >
+                New best
+              </Text>
+            )}
+
+            <Text
+              style={[styles.highlight, { color: theme.inkMuted }]}
+              accessibilityRole="text"
+              accessibilityLabel={highlightText}
+              testID="game-over-highlight"
+            >
+              {highlightText}
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Play again"
+              style={({ pressed }) => [
+                styles.primaryButton,
+                {
+                  backgroundColor: theme.accent,
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+              onPress={handlePlayAgain}
+            >
+              <Text style={styles.primaryButtonText}>Play again</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Home"
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+              onPress={handleHome}
+            >
+              <Text style={[styles.secondaryButtonText, { color: theme.inkMuted }]}>
+                Home
+              </Text>
+            </Pressable>
+          </>
         )}
-
-        <Text
-          style={[styles.highlight, { color: theme.inkMuted }]}
-          accessibilityRole="text"
-          accessibilityLabel={highlightText}
-          testID="game-over-highlight"
-        >
-          {highlightText}
-        </Text>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Play again"
-          style={({ pressed }) => [
-            styles.primaryButton,
-            {
-              backgroundColor: theme.accent,
-              opacity: pressed ? 0.9 : 1,
-            },
-          ]}
-          onPress={handlePlayAgain}
-        >
-          <Text style={styles.primaryButtonText}>Play again</Text>
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Home"
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            {
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-          onPress={handleHome}
-        >
-          <Text style={[styles.secondaryButtonText, { color: theme.inkMuted }]}>
-            Home
-          </Text>
-        </Pressable>
       </Animated.View>
     </View>
   );
@@ -310,5 +455,8 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontFamily: 'Figtree_600SemiBold',
     fontSize: 16,
+  },
+  starsContainer: {
+    marginVertical: 12,
   },
 });
