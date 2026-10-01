@@ -82,4 +82,46 @@ describe('PauseMenu component', () => {
     });
     expect(onQuit).toHaveBeenCalled();
   });
+
+  it('wraps overlay in a full-screen Modal with required props and theme.scrim', () => {
+    const onResume = jest.fn();
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <PauseMenu
+          visible={true}
+          onResume={onResume}
+          onRestart={jest.fn()}
+          onQuit={jest.fn()}
+        />
+      );
+    });
+
+    const root = tree.root;
+    const { Modal, StyleSheet } = require('react-native');
+    const modal = root.findByType(Modal);
+
+    expect(modal.props.visible).toBe(true);
+    expect(modal.props.transparent).toBe(true);
+    expect(modal.props.animationType).toBe('none');
+    expect(modal.props.statusBarTranslucent).toBe(true);
+    expect(modal.props.navigationBarTranslucent).toBe(true);
+    expect(modal.props.onRequestClose).toBe(onResume);
+
+    // Trigger Android back button via onRequestClose
+    act(() => {
+      modal.props.onRequestClose();
+    });
+    expect(onResume).toHaveBeenCalledTimes(1);
+
+    // Verify overlay style has absoluteFill and theme.scrim
+    const overlay = root.findByProps({ testID: 'pause-menu-overlay' });
+    const flattened = StyleSheet.flatten(overlay.props.style);
+    expect(flattened.position).toBe('absolute');
+    expect(flattened.top).toBe(0);
+    expect(flattened.bottom).toBe(0);
+    expect(flattened.left).toBe(0);
+    expect(flattened.right).toBe(0);
+    expect(flattened.backgroundColor).toBe('rgba(14,18,24,0.55)');
+  });
 });

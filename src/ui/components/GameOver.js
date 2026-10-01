@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Modal } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -161,10 +161,6 @@ export default function GameOver({
     transform: [{ translateY: translateY.value }],
   }));
 
-  if (!visible) {
-    return null;
-  }
-
   const isAdventure = modeKey === 'adventure';
   const isLevelComplete = isAdventure && overReason === 'levelComplete';
 
@@ -176,15 +172,26 @@ export default function GameOver({
   }
 
   return (
-    <View style={styles.overlay} testID="game-over-overlay">
-      <Animated.View
-        style={[
-          styles.card,
-          { backgroundColor: theme.surface },
-          animatedCardStyle,
-        ]}
-        testID="game-over-card"
+    <Modal
+      visible={Boolean(visible)}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={handleHome}
+    >
+      <View
+        style={[styles.overlay, { backgroundColor: theme.scrim }]}
+        testID="game-over-overlay"
       >
+        <Animated.View
+          style={[
+            styles.card,
+            { backgroundColor: theme.surface },
+            animatedCardStyle,
+          ]}
+          testID="game-over-card"
+        >
         {isLevelComplete ? (
           <>
             <Text style={[styles.title, { color: theme.ink }]}>Level complete</Text>
@@ -378,13 +385,13 @@ export default function GameOver({
         )}
       </Animated.View>
     </View>
+  </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,

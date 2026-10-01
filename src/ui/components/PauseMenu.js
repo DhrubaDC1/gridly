@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Modal } from 'react-native';
 import { useTheme } from '../theme';
 
 /**
@@ -22,72 +22,79 @@ export default function PauseMenu({
   const defaultTheme = useTheme();
   const theme = customTheme || defaultTheme;
 
-  if (!visible) {
-    return null;
-  }
-
   return (
-    <View style={styles.overlay} testID="pause-menu-overlay">
-      <View style={[styles.card, { backgroundColor: theme.surface }]}>
-        <Text style={[styles.title, { color: theme.ink }]}>Paused</Text>
+    <Modal
+      visible={Boolean(visible)}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onResume}
+    >
+      <View
+        style={[styles.overlay, { backgroundColor: theme.scrim }]}
+        testID="pause-menu-overlay"
+      >
+        <View style={[styles.card, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.title, { color: theme.ink }]}>Paused</Text>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Resume"
-          style={({ pressed }) => [
-            styles.button,
-            {
-              backgroundColor: theme.accent,
-              opacity: pressed ? 0.9 : 1,
-            },
-          ]}
-          onPress={onResume}
-        >
-          <Text style={styles.primaryButtonText}>Resume</Text>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Resume"
+            style={({ pressed }) => [
+              styles.button,
+              {
+                backgroundColor: theme.accent,
+                opacity: pressed ? 0.9 : 1,
+              },
+            ]}
+            onPress={onResume}
+          >
+            <Text style={styles.primaryButtonText}>Resume</Text>
+          </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Restart"
-          style={({ pressed }) => [
-            styles.button,
-            {
-              backgroundColor: theme.well,
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-          onPress={onRestart}
-        >
-          <Text style={[styles.secondaryButtonText, { color: theme.ink }]}>
-            Restart
-          </Text>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Restart"
+            style={({ pressed }) => [
+              styles.button,
+              {
+                backgroundColor: theme.well,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+            onPress={onRestart}
+          >
+            <Text style={[styles.secondaryButtonText, { color: theme.ink }]}>
+              Restart
+            </Text>
+          </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Quit to home"
-          style={({ pressed }) => [
-            styles.button,
-            styles.tertiaryButton,
-            {
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-          onPress={onQuit}
-        >
-          <Text style={[styles.tertiaryButtonText, { color: theme.inkMuted }]}>
-            Quit to home
-          </Text>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Quit to home"
+            style={({ pressed }) => [
+              styles.button,
+              styles.tertiaryButton,
+              {
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+            onPress={onQuit}
+          >
+            <Text style={[styles.tertiaryButtonText, { color: theme.inkMuted }]}>
+              Quit to home
+            </Text>
+          </Pressable>
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,

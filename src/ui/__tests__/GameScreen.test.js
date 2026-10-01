@@ -132,4 +132,57 @@ describe('GameScreen component', () => {
       tree.unmount();
     });
   });
+
+  test('pausing sets board and tray to opacity 0, shows PauseMenu, and resuming restores opacity 1', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(<GameScreen mode="classic" />);
+    });
+
+    const root = tree.root;
+    const { StyleSheet } = require('react-native');
+    const PauseMenu = require('../components/PauseMenu').default;
+    const Board = require('../components/Board').default;
+    const Tray = require('../components/Tray').default;
+
+    // Initially not paused: PauseMenu visible is false, board and tray opacity 1
+    const pauseMenu = root.findByType(PauseMenu);
+    expect(pauseMenu.props.visible).toBe(false);
+
+    const board = root.findByType(Board);
+    const boardContainer = board.parent;
+    expect(StyleSheet.flatten(boardContainer.props.style).opacity).toBe(1);
+
+    const tray = root.findByType(Tray.type || Tray);
+    const bottomRow = tray.parent;
+    expect(StyleSheet.flatten(bottomRow.props.style).opacity).toBe(1);
+    expect(StyleSheet.flatten(tray.props.style).opacity).toBe(1);
+
+    // Pause the game via headerRight
+    const stackScreen = root.findByType('StackScreen');
+    const headerRight = stackScreen.props.options.headerRight();
+    act(() => {
+      headerRight.props.onPress();
+    });
+
+    // When paused: PauseMenu visible is true, board and tray opacity are 0
+    expect(pauseMenu.props.visible).toBe(true);
+    expect(StyleSheet.flatten(boardContainer.props.style).opacity).toBe(0);
+    expect(StyleSheet.flatten(bottomRow.props.style).opacity).toBe(0);
+    expect(StyleSheet.flatten(tray.props.style).opacity).toBe(0);
+
+    // Resume via PauseMenu onResume
+    act(() => {
+      pauseMenu.props.onResume();
+    });
+
+    expect(pauseMenu.props.visible).toBe(false);
+    expect(StyleSheet.flatten(boardContainer.props.style).opacity).toBe(1);
+    expect(StyleSheet.flatten(bottomRow.props.style).opacity).toBe(1);
+    expect(StyleSheet.flatten(tray.props.style).opacity).toBe(1);
+
+    act(() => {
+      tree.unmount();
+    });
+  });
 });

@@ -449,7 +449,7 @@ export default function GameScreen({
         )}
       </View>
 
-      {/* Hero Board - Dimmed while paused */}
+      {/* Hero Board - Hidden while paused */}
       <View
         onLayout={(e) => setBoardLayout(e.nativeEvent.layout)}
         style={[
@@ -457,7 +457,7 @@ export default function GameScreen({
           {
             width: boardSize,
             height: boardSize,
-            opacity: isPaused ? 0.08 : 1,
+            opacity: isPaused ? 0 : 1,
           },
         ]}
       >
@@ -488,7 +488,13 @@ export default function GameScreen({
       {/* Bottom Area: Hold Slot to the left of Tray */}
       <View
         onLayout={(e) => setBottomRowLayout(e.nativeEvent.layout)}
-        style={[styles.bottomRow, { width: boardSize }]}
+        style={[
+          styles.bottomRow,
+          {
+            width: boardSize,
+            opacity: isPaused ? 0 : 1,
+          },
+        ]}
       >
         <HoldSlot
           piece={heldPiece}
@@ -529,6 +535,7 @@ export default function GameScreen({
           onPlace={handlePlacePiece}
           onHold={handleHoldFromTray}
           onPickup={handlePickup}
+          style={{ opacity: isPaused ? 0 : 1 }}
         />
       </View>
 
