@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Text } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -12,10 +12,10 @@ import { getPieceDimensions } from '../boardLayout';
 import { canPlace } from '../../engine/board';
 
 /**
- * Single Tray Slot displaying one piece at 55% scale with drag & drop handling.
+ * HoldSlot component rendering one held piece at 55% scale or a subtle empty state.
+ * Supports drag & drop onto the board, and visual highlight when hovered by a tray piece.
  *
  * @param {Object} props
- * @param {number} props.slotIndex
  * @param {{ color: number, cells: Array<[number, number]> } | null} props.piece
  * @param {number} props.slotWidth
  * @param {number} props.slotHeight
@@ -30,18 +30,13 @@ import { canPlace } from '../../engine/board';
  * @param {import('react-native-reanimated').SharedValue<number>} props.ghost.ghostY
  * @param {import('react-native-reanimated').SharedValue<number>} props.ghost.ghostOpacity
  * @param {(piece: any) => void} props.ghost.setActiveGhostPiece
- * @param {import('react-native-reanimated').SharedValue<number>} [props.slotHoldOffsetX]
- * @param {import('react-native-reanimated').SharedValue<number>} [props.slotHoldOffsetY]
- * @param {number} [props.holdWidth]
- * @param {number} [props.holdHeight]
+ * @param {(piece: any, row: number, col: number) => void} props.onPlace
  * @param {boolean} [props.canHold=true]
- * @param {import('react-native-reanimated').SharedValue<boolean>} [props.isHoldHovered]
- * @param {(slotIndex: number, piece: any) => void} [props.onHold]
- * @param {boolean} props.reduceMotion
+ * @param {import('react-native-reanimated').SharedValue<boolean>} [props.isHovered]
+ * @param {boolean} [props.reduceMotion=false]
  * @param {Object} props.theme
  */
-export default function TraySlot({
-  slotIndex,
+export default function HoldSlot({
   piece,
   slotWidth,
   slotHeight,
@@ -51,16 +46,11 @@ export default function TraySlot({
   boardRef,
   slotBoardOffsetX,
   slotBoardOffsetY,
-  slotHoldOffsetX,
-  slotHoldOffsetY,
-  holdWidth,
-  holdHeight,
-  canHold = true,
-  isHoldHovered,
   ghost,
   onPlace,
-  onHold,
-  reduceMotion,
+  canHold = true,
+  isHovered,
+  reduceMotion = false,
   theme,
 }) {
   const [isDraggingState, setIsDraggingState] = useState(false);
@@ -80,7 +70,6 @@ export default function TraySlot({
   const lastRow = useSharedValue(-999);
   const lastCol = useSharedValue(-999);
   const isValidPlacement = useSharedValue(false);
-  const isOverHoldSlot = useSharedValue(false);
 
   const pickupDuration = reduceMotion ? 60 : 120;
   const snapDuration = reduceMotion ? 45 : 90;
@@ -92,7 +81,6 @@ export default function TraySlot({
     gap
   );
 
-  // When piece prop changes (e.g. new piece in slot or refill), reset state cleanly
   useEffect(() => {
     if (piece) {
       translateX.value = 0;
@@ -103,7 +91,6 @@ export default function TraySlot({
       pieceOpacity.value = 1;
       isDragging.value = false;
       liftProgress.value = 0;
-      isOverHoldSlot.value = false;
     }
   }, [piece]);
 
@@ -128,13 +115,10 @@ export default function TraySlot({
 
   const handleDragEndJS = () => {
     setIsDraggingState(false);
-    if (isHoldHovered) {
-      isHoldHovered.value = false;
-    }
     ghost.setActiveGhostPiece(null);
   };
 
-  const handleDropSuccessJS = (slotIdx, p, row, col) => {
+  const handleDropSuccessJS = (p, row, col) => {
     isDragging.value = false;
     lastRow.value = -999;
     lastCol.value = -999;
@@ -143,18 +127,7 @@ export default function TraySlot({
 
     setIsDraggingState(false);
     ghost.setActiveGhostPiece(null);
-    onPlace(slotIdx, p, row, col);
-  };
-
-  const handleHoldSuccessJS = (slotIdx, p) => {
-    isDragging.value = false;
-    isOverHoldSlot.value = false;
-    if (isHoldHovered) {
-      isHoldHovered.value = false;
-    }
-    setIsDraggingState(false);
-    ghost.setActiveGhostPiece(null);
-    onHold?.(slotIdx, p);
+    onPlace(p, row, col);
   };
 
   const panGesture = Gesture.Pan()
@@ -167,7 +140,6 @@ export default function TraySlot({
       translationX.value = 0;
       translationY.value = 0;
       isDragging.value = true;
-      isOverHoldSlot.value = false;
       lastRow.value = -999;
       lastCol.value = -999;
       isValidPlacement.value = false;
@@ -177,7 +149,6 @@ export default function TraySlot({
       liftOffsetY.value =
         event.y - cellSize - pieceHeight / 2 - slotHeight / 2;
 
-      // Smoothly animate lift progress from 0 to 1 (piece starts at 0 with zero jump)
       liftProgress.value = 0;
       liftProgress.value = withTiming(1.0, { duration: pickupDuration });
 
@@ -198,36 +169,6 @@ export default function TraySlot({
 
       const pieceSlotLeft = (slotWidth - pieceWidth) / 2 + curX;
       const pieceSlotTop = (slotHeight - pieceHeight) / 2 + curY;
-
-      // Check if hovering over hold slot
-      if (canHold && slotHoldOffsetX && isHoldHovered) {
-        const pieceHoldLeft = pieceSlotLeft - slotHoldOffsetX.value;
-        const pieceHoldTop = pieceSlotTop - (slotHoldOffsetY?.value ?? 0);
-        const pieceHoldCenterX = pieceHoldLeft + pieceWidth / 2;
-        const pieceHoldCenterY = pieceHoldTop + pieceHeight / 2;
-
-        const targetHoldWidth = holdWidth ?? slotWidth;
-        const targetHoldHeight = holdHeight ?? slotHeight;
-        const margin = 16;
-        const isOverHold =
-          pieceHoldCenterX >= -margin &&
-          pieceHoldCenterX <= targetHoldWidth + margin &&
-          pieceHoldCenterY >= -margin &&
-          pieceHoldCenterY <= targetHoldHeight + margin;
-
-        if (isOverHold) {
-          if (!isOverHoldSlot.value) {
-            isOverHoldSlot.value = true;
-            isHoldHovered.value = true;
-          }
-          isValidPlacement.value = false;
-          ghost.ghostOpacity.value = 0;
-          return;
-        } else if (isOverHoldSlot.value) {
-          isOverHoldSlot.value = false;
-          isHoldHovered.value = false;
-        }
-      }
 
       // Top-left of piece relative to board
       const pieceBoardLeft = slotBoardOffsetX.value + pieceSlotLeft;
@@ -258,35 +199,6 @@ export default function TraySlot({
       scale.value = curScale;
       isDragging.value = false;
 
-      if (isOverHoldSlot.value && onHold && slotHoldOffsetX) {
-        isOverHoldSlot.value = false;
-        if (isHoldHovered) {
-          isHoldHovered.value = false;
-        }
-
-        const targetHoldWidth = holdWidth ?? slotWidth;
-        const targetHoldHeight = holdHeight ?? slotHeight;
-        const targetSnapX =
-          slotHoldOffsetX.value + (targetHoldWidth - pieceWidth) / 2;
-        const targetSnapY =
-          (slotHoldOffsetY?.value ?? 0) + (targetHoldHeight - pieceHeight) / 2;
-
-        ghost.ghostOpacity.value = 0;
-        scale.value = withTiming(0.55, { duration: snapDuration });
-        translateX.value = withTiming(targetSnapX, { duration: snapDuration });
-        translateY.value = withTiming(
-          targetSnapY,
-          { duration: snapDuration },
-          (finished) => {
-            if (finished) {
-              pieceOpacity.value = 0;
-              runOnJS(handleHoldSuccessJS)(slotIndex, piece);
-            }
-          }
-        );
-        return;
-      }
-
       if (isValidPlacement.value) {
         const step = cellSize + gap;
         const snapBoardLeft = padding + lastCol.value * step;
@@ -305,10 +217,8 @@ export default function TraySlot({
           { duration: snapDuration },
           (finished) => {
             if (finished) {
-              // Hide piece immediately so it never flashes back in the tray deck
               pieceOpacity.value = 0;
               runOnJS(handleDropSuccessJS)(
-                slotIndex,
                 piece,
                 lastRow.value,
                 lastCol.value
@@ -317,10 +227,6 @@ export default function TraySlot({
           }
         );
       } else {
-        if (isHoldHovered) {
-          isHoldHovered.value = false;
-        }
-        isOverHoldSlot.value = false;
         ghost.ghostOpacity.value = 0;
         translateX.value = withTiming(0, { duration: returnDuration });
         translateY.value = withTiming(0, { duration: returnDuration });
@@ -357,22 +263,69 @@ export default function TraySlot({
     };
   });
 
+  const highlightAnimatedStyle = useAnimatedStyle(() => {
+    const active = isHovered?.value ? 1 : 0;
+    return {
+      opacity: withTiming(active, { duration: reduceMotion ? 50 : 100 }),
+    };
+  });
+
+  const slotOpacity = canHold || isDraggingState ? 1.0 : 0.45;
+  const accessibilityLabel = !canHold
+    ? 'Hold slot, locked'
+    : piece
+    ? 'Hold slot, contains piece'
+    : 'Hold slot, empty';
+
   return (
     <GestureDetector gesture={panGesture}>
       <View
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
         style={[
           styles.slotWrapper,
           {
             width: slotWidth,
             height: slotHeight,
+            opacity: slotOpacity,
             zIndex: isDraggingState ? 9999 : 1,
             elevation: isDraggingState ? 9999 : 1,
           },
         ]}
       >
+        {/* Slot Background in theme well color */}
         <View
-          style={[styles.slotBackground, { backgroundColor: theme.surface }]}
+          style={[styles.slotBackground, { backgroundColor: theme.well }]}
         />
+
+        {/* Hover Highlight Overlay */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.highlightOverlay,
+            {
+              borderColor: theme.accent,
+              backgroundColor: theme.accent + '18',
+            },
+            highlightAnimatedStyle,
+          ]}
+        />
+
+        {/* Empty state: subtle dashed border with "Hold" */}
+        {!piece && (
+          <View
+            style={[
+              styles.emptyStateContainer,
+              { borderColor: theme.cellEmpty },
+            ]}
+          >
+            <Text style={[styles.emptyStateText, { color: theme.inkMuted }]}>
+              Hold
+            </Text>
+          </View>
+        )}
+
+        {/* Held piece displayed at 55% scale */}
         {piece && (
           <Animated.View
             style={[
@@ -400,6 +353,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     overflow: 'visible',
+    borderRadius: 14,
   },
   slotBackground: {
     position: 'absolute',
@@ -409,8 +363,34 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderRadius: 14,
   },
+  highlightOverlay: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 14,
+    borderWidth: 2,
+    zIndex: 2,
+  },
+  emptyStateContainer: {
+    width: '78%',
+    height: '78%',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    fontFamily: 'Figtree_500Medium',
+    fontSize: 13,
+    letterSpacing: 0.2,
+    opacity: 0.7,
+  },
   pieceWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
 });
