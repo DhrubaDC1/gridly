@@ -43,6 +43,8 @@ import { createRng, createRngFromState } from './rng';
  * @property {boolean} over
  * @property {string | null} overReason
  * @property {GameStats} stats
+ * @property {number} [timeLeftMs]
+ * @property {number | null} [lastPlaceAtMs]
  *
  * @typedef {Object} GameEvent
  * @property {string} type
@@ -137,6 +139,11 @@ export function createGame({ seed = 0, mode = 'classic', initial = null } = {}) 
       piecesPlaced: 0,
     },
   };
+
+  if (mode === 'blitz') {
+    state.timeLeftMs = 90000;
+    state.lastPlaceAtMs = null;
+  }
 
   if (isGameOver(state)) {
     state.over = true;
@@ -430,6 +437,13 @@ export function placePiece(state, source, row, col) {
     },
   };
 
+  if (state.timeLeftMs !== undefined) {
+    nextState.timeLeftMs = state.timeLeftMs;
+  }
+  if (state.lastPlaceAtMs !== undefined) {
+    nextState.lastPlaceAtMs = state.lastPlaceAtMs;
+  }
+
   if (isGameOver(nextState)) {
     nextState.over = true;
     nextState.overReason = 'noMoves';
@@ -457,7 +471,7 @@ export function serializeGame(state) {
  */
 export function restoreGame(json) {
   const parsed = typeof json === 'string' ? JSON.parse(json) : json;
-  return {
+  const state = {
     mode: parsed.mode,
     board: parsed.board.map((cell) => (cell ? { ...cell } : null)),
     tray: parsed.tray.map((p) => (p ? { id: p.id, color: p.color } : null)),
@@ -479,4 +493,13 @@ export function restoreGame(json) {
       piecesPlaced: parsed.stats?.piecesPlaced ?? 0,
     },
   };
+
+  if (parsed.timeLeftMs !== undefined) {
+    state.timeLeftMs = parsed.timeLeftMs;
+  }
+  if (parsed.lastPlaceAtMs !== undefined) {
+    state.lastPlaceAtMs = parsed.lastPlaceAtMs;
+  }
+
+  return state;
 }
