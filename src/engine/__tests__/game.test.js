@@ -53,6 +53,28 @@ describe('Engine: Game Controller (src/engine/game.js)', () => {
       expect(state.mode).toBe('classic');
       expect(state.tray).toHaveLength(3);
     });
+
+    it('uses provided initial board and tray instead of generating them', () => {
+      const customBoard = createBoard();
+      customBoard[0] = { color: 3, kind: 'normal', hp: 1 };
+      const customTray = [
+        { id: 'line_1x3', color: 2 },
+        { id: 'square_2x2', color: 4 },
+        null,
+      ];
+
+      const state = createGame({
+        seed: 777,
+        initial: { board: customBoard, tray: customTray },
+      });
+
+      expect(state.board[0]).toEqual({ color: 3, kind: 'normal', hp: 1 });
+      expect(state.tray[0]).toEqual({ id: 'line_1x3', color: 2 });
+      expect(state.tray[1]).toEqual({ id: 'square_2x2', color: 4 });
+      expect(state.tray[2]).toBeNull();
+      // Ensure seed was still initialized into rngState
+      expect(typeof state.rngState).toBe('number');
+    });
   });
 
   describe('Invalid placements and holds', () => {

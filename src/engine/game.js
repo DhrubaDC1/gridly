@@ -91,18 +91,28 @@ export function isGameOver(state) {
 }
 
 /**
- * Creates a new game state with a generated tray.
+ * Creates a new game state with a generated tray or provided initial state.
  *
  * @param {Object} [options]
  * @param {number} [options.seed=0]
  * @param {string} [options.mode='classic']
+ * @param {{ board: import('./board').Board, tray: (PieceRef | null)[] } | null} [options.initial=null]
  * @returns {GameState}
  */
-export function createGame({ seed = 0, mode = 'classic' } = {}) {
+export function createGame({ seed = 0, mode = 'classic', initial = null } = {}) {
   const rng = createRng(seed);
-  const board = createBoard();
-  const generatedTray = generateTray(board, 0, rng);
-  const tray = generatedTray.map((p) => ({ id: p.id, color: p.color }));
+  let board;
+  let tray;
+
+  if (initial && initial.board && initial.tray) {
+    board = initial.board.map((cell) => (cell ? { ...cell } : null));
+    tray = initial.tray.map((p) => (p ? { id: p.id, color: p.color } : null));
+  } else {
+    board = createBoard();
+    const generatedTray = generateTray(board, 0, rng);
+    tray = generatedTray.map((p) => ({ id: p.id, color: p.color }));
+  }
+
   const rngState = rng.getState();
 
   const state = {

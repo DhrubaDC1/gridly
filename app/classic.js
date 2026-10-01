@@ -6,7 +6,7 @@ import {
   Pressable,
   useWindowDimensions,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -20,13 +20,17 @@ import Tray from '../src/ui/components/Tray';
 import HoldSlot from '../src/ui/components/HoldSlot';
 import ScoreTicker from '../src/ui/components/ScoreTicker';
 import ComboLabel from '../src/ui/components/ComboLabel';
+import PauseMenu from '../src/ui/components/PauseMenu';
+import HandHint from '../src/ui/components/HandHint';
 import { getDefaultBoardSize, getBoardMetrics } from '../src/ui/boardLayout';
 import { useGameController } from '../src/game/useGameController';
 import { adaptPiece, adaptTray } from '../src/game/adapter';
 import { useProgress } from '../src/store/useProgress';
+import { useSettings } from '../src/store/useSettings';
 import { onPickup } from '../src/services/feedback';
 
 export default function ClassicScreen() {
+  const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
@@ -40,13 +44,19 @@ export default function ClassicScreen() {
     hold,
     restart,
     subscribe,
+    isPaused,
+    pause,
+    resume,
   } = useGameController();
   const savedBestScore = useProgress((s) => s.stats.bestScore.classic);
   const bestScore = Math.max(savedBestScore || 0, state.score);
+  const seenOnboarding = useSettings((s) => s.seenOnboarding);
+
+  const [hasStartedDragging, setHasStartedDragging] = useState(false);
 
   const trayPieces = useMemo(() => adaptTray(state.tray), [state.tray]);
   const heldPiece = useMemo(() => adaptPiece(state.hold), [state.hold]);
-  const canHold = !state.holdUsed && !state.over;
+  const canHold = !state.holdUsed && !state.over && !isPaused;
 
   const [ghostPiece, setGhostPiece] = useState(null);
   const [boardLayout, setBoardLayout] = useState(null);
@@ -144,6 +154,11 @@ export default function ClassicScreen() {
     ],
   }));
 
+  const handlePickup = useCallback(() => {
+    setHasStartedDragging(true);
+    onPickup();
+  }, []);
+
   const handlePlacePiece = useCallback(
     (slotIndex, piece, row, col) => {
       place(slotIndex, row, col);
@@ -165,6 +180,65 @@ export default function ClassicScreen() {
     [hold]
   );
 
+  const handlePause = useCallback(() => {
+    if (!state.over) {
+      pause();
+    }
+  }, [state.over, pause]);
+
+  const handleResume = useCallback(() => {
+    resume();
+  }, [resume]);
+
+  const handleRestart = useCallback(() => {
+    resume();
+    restart();
+  }, [resume, restart]);
+
+  const handleQuit = useCallback(() => {
+    resume();
+    router.replace('/');
+  }, [resume, router]);
+
+  const showHandHint =
+    !seenOnboarding &&
+    !hasStartedDragging &&
+    !isPaused &&
+    !state.over &&
+    state.tray.some((p) => p?.id === 'line_1x3');
+
+  const hintCoords = useMemo(() => {
+    if (!boardLayout || !bottomRowLayout) return null;
+    const trayX = boardSize - trayWidth;
+    const startX = bottomRowLayout.x + trayX + slotWidth / 2;
+    const startY = bottomRowLayout.y + slotHeight / 2;
+
+    const step = metrics.cellSize + metrics.gap;
+    const endX =
+      boardLayout.x +
+      metrics.padding +
+      6 * step +
+      metrics.cellSize / 2;
+    const endY =
+      boardLayout.y +
+      metrics.padding +
+      7 * step +
+      metrics.cellSize / 2;
+
+    return {
+      startPos: { x: startX, y: startY },
+      endPos: { x: endX, y: endY },
+    };
+  }, [
+    boardLayout,
+    bottomRowLayout,
+    boardSize,
+    trayWidth,
+    slotWidth,
+    slotHeight,
+    metrics,
+  ]);
+
   return (
     <View
       style={[
@@ -184,6 +258,7 @@ export default function ClassicScreen() {
               accessibilityRole="button"
               accessibilityLabel="Pause game"
               hitSlop={8}
+              onPress={handlePause}
               style={styles.pauseButton}
             >
               <Text style={[styles.pauseText, { color: theme.ink }]}>⏸</Text>
@@ -200,10 +275,17 @@ export default function ClassicScreen() {
         </Text>
       </View>
 
-      {/* Hero Board */}
+      {/* Hero Board - Dimmed while paused */}
       <View
         onLayout={(e) => setBoardLayout(e.nativeEvent.layout)}
-        style={[styles.boardContainer, { width: boardSize, height: boardSize }]}
+        style={[
+          styles.boardContainer,
+          {
+            width: boardSize,
+            height: boardSize,
+            opacity: isPaused ? 0.08 : 1,
+          },
+        ]}
       >
         <Board
           board={state.board}
@@ -245,7 +327,7 @@ export default function ClassicScreen() {
           slotBoardOffsetY={holdBoardOffsetY}
           ghost={ghostObject}
           onPlace={handlePlaceHeldPiece}
-          onPickup={onPickup}
+          onPickup={handlePickup}
           canHold={canHold}
           isHovered={isHoldHovered}
           reduceMotion={reduceMotion}
@@ -271,9 +353,26 @@ export default function ClassicScreen() {
           ghost={ghostObject}
           onPlace={handlePlacePiece}
           onHold={handleHoldFromTray}
-          onPickup={onPickup}
+          onPickup={handlePickup}
         />
       </View>
+
+      {/* Hand Hint Animation (loops until dragging starts, disappears on drag) */}
+      <HandHint
+        visible={Boolean(showHandHint && hintCoords)}
+        startPos={hintCoords?.startPos}
+        endPos={hintCoords?.endPos}
+        theme={theme}
+      />
+
+      {/* Pause Menu Overlay */}
+      <PauseMenu
+        visible={isPaused}
+        onResume={handleResume}
+        onRestart={handleRestart}
+        onQuit={handleQuit}
+        theme={theme}
+      />
 
       {/* Game Over Overlay */}
       {state.over && (
@@ -314,6 +413,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    position: 'relative',
   },
   pauseButton: {
     minWidth: 44,

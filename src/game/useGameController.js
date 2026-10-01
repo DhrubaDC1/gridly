@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { AppState } from 'react-native';
 import {
   createGame,
   placePiece,
@@ -7,6 +8,8 @@ import {
   restoreGame,
 } from '../engine/game';
 import { useProgress } from '../store/useProgress';
+import { useSettings } from '../store/useSettings';
+import { SCRIPTED_INITIAL_STATE } from './onboarding';
 import { playFeedbackForEvents } from './eventsFeedback';
 import { buildClearingDescription } from './clearWave';
 
@@ -21,13 +24,14 @@ function generateSeed() {
 
 /**
  * Creates a standalone game controller managing engine state, actions, event stream,
- * and persistence. Can be used in non-React test environments as well as inside hooks.
+ * persistence, and pause state.
  *
  * @param {Object} [options]
  * @param {number} [options.seed] - Seed to use for new game.
  * @param {string} [options.mode='classic'] - Game mode ('classic', 'blitz', etc.).
  * @param {import('../engine/game').GameState} [options.initialState] - Pre-loaded state.
  * @param {boolean} [options.persist=true] - Whether to persist in-progress game to useProgress.
+ * @param {{ board: import('../engine/board').Board, tray: (Object | null)[] }} [options.initial]
  * @returns {Object} Game controller instance.
  */
 export function createGameController(options = {}) {
@@ -36,10 +40,12 @@ export function createGameController(options = {}) {
     mode = 'classic',
     initialState = null,
     persist = true,
+    initial: customInitial = null,
   } = options;
 
   let state = null;
   let clearing = null;
+  let paused = false;
 
   if (initialState) {
     state = initialState;
@@ -58,17 +64,33 @@ export function createGameController(options = {}) {
   }
 
   if (!state) {
+    let initial = customInitial;
+    if (!initial && mode === 'classic' && persist) {
+      const seenOnboarding = useSettings.getState().seenOnboarding;
+      const hasSaved = Boolean(useProgress.getState().inProgress?.[mode]);
+      if (!seenOnboarding && !hasSaved) {
+        initial = SCRIPTED_INITIAL_STATE;
+      }
+    }
     const seed = typeof initialSeed === 'number' ? initialSeed : generateSeed();
-    state = createGame({ seed, mode });
+    state = createGame({ seed, mode, initial });
   }
 
   const stateSubscribers = new Set();
   const eventSubscribers = new Set();
+  const pauseSubscribers = new Set();
 
   function notifyState() {
     const listeners = Array.from(stateSubscribers);
     for (let i = 0; i < listeners.length; i++) {
       listeners[i](state, clearing);
+    }
+  }
+
+  function notifyPause() {
+    const listeners = Array.from(pauseSubscribers);
+    for (let i = 0; i < listeners.length; i++) {
+      listeners[i](paused);
     }
   }
 
@@ -105,6 +127,29 @@ export function createGameController(options = {}) {
     }
   }
 
+  function pause() {
+    if (state.over || paused) return;
+    paused = true;
+    syncPersistence();
+    notifyPause();
+    notifyState();
+  }
+
+  function resume() {
+    if (!paused) return;
+    paused = false;
+    notifyPause();
+    notifyState();
+  }
+
+  function setPaused(val) {
+    if (val) {
+      pause();
+    } else {
+      resume();
+    }
+  }
+
   /**
    * Places a piece from tray or hold onto the board at (row, col).
    * Invalid placement leaves state unchanged.
@@ -115,7 +160,7 @@ export function createGameController(options = {}) {
    * @returns {boolean} True if placement was valid, false otherwise.
    */
   function place(source, row, col) {
-    if (state.over) {
+    if (state.over || paused) {
       return false;
     }
 
@@ -127,6 +172,14 @@ export function createGameController(options = {}) {
 
     state = result.state;
     clearing = buildClearingDescription(prevState, result.events);
+
+    const hasClear = result.events.some(
+      (e) => e.type === 'cleared' && e.linesCount > 0
+    );
+    if (hasClear && !useSettings.getState().seenOnboarding) {
+      useSettings.getState().setSeenOnboarding(true);
+    }
+
     notifyState();
     notifyEvents(result.events);
     playFeedbackForEvents(result.events);
@@ -141,7 +194,7 @@ export function createGameController(options = {}) {
    * @returns {boolean} True if hold was valid, false otherwise.
    */
   function hold(trayIndex) {
-    if (state.over || state.holdUsed) {
+    if (state.over || paused || state.holdUsed) {
       return false;
     }
 
@@ -167,6 +220,10 @@ export function createGameController(options = {}) {
     const seed = typeof newSeed === 'number' ? newSeed : generateSeed();
     state = createGame({ seed, mode });
     clearing = null;
+    if (paused) {
+      paused = false;
+      notifyPause();
+    }
     notifyState();
 
     if (persist) {
@@ -210,6 +267,20 @@ export function createGameController(options = {}) {
     };
   }
 
+  /**
+   * Subscribes to pause changes.
+   *
+   * @param {(paused: boolean) => void} listener
+   * @returns {() => void} Unsubscribe function.
+   */
+  function subscribePause(listener) {
+    if (typeof listener !== 'function') return () => {};
+    pauseSubscribers.add(listener);
+    return () => {
+      pauseSubscribers.delete(listener);
+    };
+  }
+
   return {
     get state() {
       return state;
@@ -220,21 +291,36 @@ export function createGameController(options = {}) {
     },
     getClearing: () => clearing,
     clearClearing,
+    get isPaused() {
+      return paused;
+    },
+    get paused() {
+      return paused;
+    },
+    getIsPaused: () => paused,
+    pause,
+    resume,
+    setPaused,
     place,
     hold,
     restart,
     subscribe,
     subscribeState,
+    subscribePause,
   };
 }
 
 /**
- * React hook bridging the pure engine, UI gestures, feedback, and persistence.
+ * React hook bridging the pure engine, UI gestures, feedback, persistence, and pause.
  *
  * @param {Object} [options]
  * @returns {{
  *   state: import('../engine/game').GameState,
  *   clearing: Object | null,
+ *   isPaused: boolean,
+ *   pause: () => void,
+ *   resume: () => void,
+ *   setPaused: (val: boolean) => void,
  *   onClearingComplete: () => void,
  *   place: (source: number | 'hold', row: number, col: number) => boolean,
  *   hold: (trayIndex: number) => boolean,
@@ -251,12 +337,31 @@ export function useGameController(options = {}) {
 
   const [state, setState] = useState(() => controller.state);
   const [clearing, setClearing] = useState(() => controller.clearing);
+  const [isPaused, setIsPaused] = useState(() => controller.isPaused);
 
   useEffect(() => {
     return controller.subscribeState((newState, newClearing) => {
       setState(newState);
       setClearing(newClearing ?? controller.clearing);
+      setIsPaused(controller.isPaused);
     });
+  }, [controller]);
+
+  useEffect(() => {
+    return controller.subscribePause(setIsPaused);
+  }, [controller]);
+
+  useEffect(() => {
+    if (typeof AppState?.addEventListener === 'function') {
+      const subscription = AppState.addEventListener('change', (nextAppState) => {
+        if (nextAppState === 'background' || nextAppState === 'inactive') {
+          controller.pause();
+        }
+      });
+      return () => {
+        subscription?.remove?.();
+      };
+    }
   }, [controller]);
 
   const onClearingComplete = () => {
@@ -267,6 +372,10 @@ export function useGameController(options = {}) {
   return {
     state,
     clearing,
+    isPaused,
+    pause: controller.pause,
+    resume: controller.resume,
+    setPaused: controller.setPaused,
     onClearingComplete,
     place: controller.place,
     hold: controller.hold,

@@ -99,6 +99,7 @@ describe('Phase 0 - Scaffold & Theme', () => {
         theme: 'system',
         colorblind: false,
         reduceMotion: 'system',
+        seenOnboarding: false,
       });
     });
 

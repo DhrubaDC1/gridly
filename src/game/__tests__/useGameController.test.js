@@ -1,10 +1,12 @@
 import { createGameController } from '../useGameController';
 import { useProgress } from '../../store/useProgress';
+import { useSettings } from '../../store/useSettings';
 import { serializeGame, createGame } from '../../engine/game';
 
 describe('createGameController', () => {
   beforeEach(() => {
     useProgress.getState().resetProgress();
+    useSettings.getState().resetSettings();
   });
 
   test('initializes with a deterministic seed and empty 8x8 board', () => {
@@ -195,4 +197,75 @@ describe('createGameController', () => {
     controller.clearClearing();
     expect(controller.clearing).toBeNull();
   });
+
+  test('pause and resume controls in controller, persistence on pause, and input blocking', () => {
+    const controller = createGameController({ seed: 12345, persist: true, mode: 'classic' });
+
+    expect(controller.isPaused).toBe(false);
+    expect(controller.paused).toBe(false);
+    expect(controller.getIsPaused()).toBe(false);
+
+    let pauseNotified = null;
+    const unsub = controller.subscribePause((p) => {
+      pauseNotified = p;
+    });
+
+    // Pause the game
+    controller.pause();
+    expect(controller.isPaused).toBe(true);
+    expect(controller.paused).toBe(true);
+    expect(controller.getIsPaused()).toBe(true);
+    expect(pauseNotified).toBe(true);
+
+    // Auto-save check: game state saved to inProgress
+    const saved = useProgress.getState().inProgress.classic;
+    expect(saved).toBeDefined();
+    expect(typeof saved).toBe('string');
+
+    // While paused, placements and holds must be rejected
+    expect(controller.place(0, 0, 0)).toBe(false);
+    expect(controller.hold(0)).toBe(false);
+
+    // Resume
+    controller.resume();
+    expect(controller.isPaused).toBe(false);
+    expect(pauseNotified).toBe(false);
+
+    // setPaused helper
+    controller.setPaused(true);
+    expect(controller.isPaused).toBe(true);
+
+    // restart resets pause state
+    controller.restart(1111);
+    expect(controller.isPaused).toBe(false);
+
+    unsub();
+  });
+
+  test('scripted onboarding start when seenOnboarding is false and setting seenOnboarding true on clear', () => {
+    useSettings.getState().setSeenOnboarding(false);
+    useProgress.getState().clearInProgress('classic');
+
+    const controller = createGameController({ persist: true, mode: 'classic' });
+
+    // Scripted state check
+    expect(controller.state.tray[0].id).toBe('line_1x3');
+    for (let c = 0; c < 5; c++) {
+      expect(controller.state.board[7 * 8 + c]).not.toBeNull();
+    }
+    for (let c = 5; c < 8; c++) {
+      expect(controller.state.board[7 * 8 + c]).toBeNull();
+    }
+
+    // Placing the 1x3 piece at (7, 5) clears row 7 and sets seenOnboarding: true
+    const success = controller.place(0, 7, 5);
+    expect(success).toBe(true);
+    expect(useSettings.getState().seenOnboarding).toBe(true);
+
+    // Next game start when seenOnboarding is true starts with empty board
+    useProgress.getState().clearInProgress('classic');
+    const freshController = createGameController({ persist: true, mode: 'classic', seed: 999 });
+    expect(freshController.state.board.every((cell) => cell === null)).toBe(true);
+  });
 });
+

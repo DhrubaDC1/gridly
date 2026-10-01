@@ -12,11 +12,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * @property {ThemeMode} theme
  * @property {boolean} colorblind
  * @property {ReduceMotionMode} reduceMotion
+ * @property {boolean} seenOnboarding
  * @property {(sound: boolean) => void} setSound
  * @property {(haptics: boolean) => void} setHaptics
  * @property {(theme: ThemeMode) => void} setTheme
  * @property {(colorblind: boolean) => void} setColorblind
  * @property {(reduceMotion: ReduceMotionMode) => void} setReduceMotion
+ * @property {(seenOnboarding: boolean) => void} setSeenOnboarding
  * @property {(partial: Partial<SettingsState>) => void} updateSettings
  * @property {() => void} resetSettings
  */
@@ -27,6 +29,7 @@ export const DEFAULT_SETTINGS = {
   theme: 'system',
   colorblind: false,
   reduceMotion: 'system',
+  seenOnboarding: false,
 };
 
 export const useSettings = create(
@@ -38,6 +41,7 @@ export const useSettings = create(
       setTheme: (theme) => set({ theme }),
       setColorblind: (colorblind) => set({ colorblind }),
       setReduceMotion: (reduceMotion) => set({ reduceMotion }),
+      setSeenOnboarding: (seenOnboarding) => set({ seenOnboarding }),
       updateSettings: (partial) => set(partial),
       resetSettings: () => set(DEFAULT_SETTINGS),
     }),
