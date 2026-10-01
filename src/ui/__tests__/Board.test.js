@@ -133,4 +133,22 @@ describe('Board component', () => {
       tree.unmount();
     });
   });
+
+  test('accepts colorblind prop', () => {
+    const board = Array(64).fill(null);
+    board[0] = { color: 1, kind: 'normal', hp: 1 };
+
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <Board board={board} colorblind={true} size={320} />
+      );
+    });
+
+    expect(tree.toJSON()).toBeDefined();
+
+    act(() => {
+      tree.unmount();
+    });
+  });
 });

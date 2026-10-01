@@ -52,6 +52,7 @@ export default function ClassicScreen() {
   const savedBestScore = useProgress((s) => s.stats.bestScore.classic);
   const bestScore = Math.max(savedBestScore || 0, state.score);
   const seenOnboarding = useSettings((s) => s.seenOnboarding);
+  const colorblind = useSettings((s) => s.colorblind);
 
   const [hasStartedDragging, setHasStartedDragging] = useState(false);
 
@@ -291,6 +292,7 @@ export default function ClassicScreen() {
         <Board
           board={state.board}
           size={boardSize}
+          colorblind={colorblind}
           clearing={clearing}
           subscribe={subscribe}
           onClearingComplete={onClearingComplete}
