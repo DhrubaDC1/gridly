@@ -665,10 +665,10 @@ describe('Adventure Mode Engine', () => {
     });
   });
 
-  describe('Validation of all 12 levels in levels.json', () => {
-    it('has exactly 12 levels', () => {
+  describe('Validation of levels in levels.json', () => {
+    it('has at least 12 levels (50 at launch)', () => {
       expect(Array.isArray(levelsData)).toBe(true);
-      expect(levelsData).toHaveLength(12);
+      expect(levelsData.length).toBeGreaterThanOrEqual(12);
     });
 
     it('ensures all 12 levels pass validateLevel with zero problems', () => {
