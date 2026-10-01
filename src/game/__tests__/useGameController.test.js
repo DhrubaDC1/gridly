@@ -1,12 +1,14 @@
 import { createGameController } from '../useGameController';
 import { useProgress } from '../../store/useProgress';
 import { useSettings } from '../../store/useSettings';
+import { useToast } from '../../store/useToast';
 import { serializeGame, createGame } from '../../engine/game';
 
 describe('createGameController', () => {
   beforeEach(() => {
     useProgress.getState().resetProgress();
     useSettings.getState().resetSettings();
+    useToast.getState().clearAll();
   });
 
   test('initializes with a deterministic seed and empty 8x8 board', () => {
@@ -266,6 +268,113 @@ describe('createGameController', () => {
     useProgress.getState().clearInProgress('classic');
     const freshController = createGameController({ persist: true, mode: 'classic', seed: 999 });
     expect(freshController.state.board.every((cell) => cell === null)).toBe(true);
+  });
+
+  test('after successful place(), evaluates achievements, stores ISO date in useProgress, calls feedback.onAchievement and queues toast', () => {
+    const mockFeedback = {
+      onAchievement: jest.fn(),
+    };
+
+    // Setup board where row 0 is almost filled (cols 0-6 filled)
+    const testState = createGame({ seed: 12345 });
+    for (let c = 0; c < 7; c++) {
+      testState.board[c] = { color: 1, kind: 'normal', hp: 1 };
+    }
+    testState.tray[0] = { id: 'line_1x1', color: 1 };
+
+    const controller = createGameController({
+      initialState: testState,
+      persist: false,
+      feedback: mockFeedback,
+    });
+
+    expect(useProgress.getState().achievements.first_clear).toBeUndefined();
+    expect(useToast.getState().current).toBeNull();
+
+    // Place at (0, 7) to clear line and unlock first_clear and mono (all cells color 1)
+    const placed = controller.place(0, 0, 7);
+    expect(placed).toBe(true);
+
+    const achievements = useProgress.getState().achievements;
+    expect(achievements.first_clear).toBeDefined();
+    // Must be valid ISO string
+    expect(new Date(achievements.first_clear).toISOString()).toBe(achievements.first_clear);
+
+    // Feedback called for each unlocked achievement
+    expect(mockFeedback.onAchievement).toHaveBeenCalled();
+
+    // Toast was enqueued
+    expect(useToast.getState().current).not.toBeNull();
+    expect(useToast.getState().current.title).toBe('Achievement unlocked');
+  });
+
+  test('when a game ends, measures duration excluding paused time, applies game result with local dayKey, updates stats, and unlocks stat achievements', () => {
+    let mockTime = 1000000;
+    const mockNow = () => mockTime;
+    const mockFeedback = {
+      onAchievement: jest.fn(),
+    };
+
+    // Pre-populate stats so 1 more game reaches games_10
+    useProgress.getState().setStats((s) => ({
+      ...s,
+      gamesPlayed: { classic: 9, blitz: 0, adventure: 0 },
+    }));
+    expect(useProgress.getState().achievements.games_10).toBeUndefined();
+
+    // Create a board with alternating cells in checkerboard pattern: no row/col clears, and no 2x2 fits
+    const testState = createGame({ seed: 12345 });
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if ((r + c) % 2 === 1) {
+          testState.board[r * 8 + c] = { color: 1, kind: 'normal', hp: 1 };
+        }
+      }
+    }
+    // Tray: piece 0 is line_1x1, piece 1 is square_2x2, piece 2 is null
+    testState.tray = [
+      { id: 'line_1x1', color: 0 },
+      { id: 'square_2x2', color: 1 },
+      null,
+    ];
+    testState.hold = { id: 'square_2x2', color: 2 };
+
+    const controller = createGameController({
+      initialState: testState,
+      persist: false,
+      now: mockNow,
+      feedback: mockFeedback,
+    });
+
+    // 1. Play active for 5000ms
+    mockTime += 5000;
+
+    // 2. Pause for 10000ms
+    controller.pause();
+    mockTime += 10000;
+
+    // 3. Resume and play active for 3000ms
+    controller.resume();
+    mockTime += 3000;
+
+    // 4. Place 1x1 at (0, 0). No lines clear. Remaining tray has square_2x2 and hold has square_2x2, neither fits -> game over!
+    const placed = controller.place(0, 0, 0);
+    expect(placed).toBe(true);
+    expect(controller.state.over).toBe(true);
+
+    // Duration should be 5000 + 3000 = 8000ms (10000ms pause excluded)
+    expect(controller.getDurationMs()).toBe(8000);
+
+    const stats = useProgress.getState().stats;
+    expect(stats.gamesPlayed.classic).toBe(10);
+    expect(stats.totalPlayTime).toBe(8000);
+    expect(stats.lastPlayedDay).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    // Stat-based achievement games_10 must have unlocked on game over!
+    const achievements = useProgress.getState().achievements;
+    expect(achievements.games_10).toBeDefined();
+    expect(new Date(achievements.games_10).toISOString()).toBe(achievements.games_10);
+    expect(mockFeedback.onAchievement).toHaveBeenCalled();
   });
 });
 

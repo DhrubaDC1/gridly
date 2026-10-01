@@ -7,11 +7,16 @@ import {
   serializeGame,
   restoreGame,
 } from '../engine/game';
+import { evaluate } from '../engine/achievements';
+import { applyGameResult } from '../engine/stats';
 import { useProgress } from '../store/useProgress';
 import { useSettings } from '../store/useSettings';
+import { useToast } from '../store/useToast';
+import { onAchievement } from '../services/feedback';
 import { SCRIPTED_INITIAL_STATE } from './onboarding';
 import { playFeedbackForEvents } from './eventsFeedback';
 import { buildClearingDescription } from './clearWave';
+import { buildGameResult, getLocalDayKey } from './gameResult';
 
 /**
  * Generates a random 32-bit positive integer seed for deterministic engine runs.
@@ -41,14 +46,25 @@ export function createGameController(options = {}) {
     initialState = null,
     persist = true,
     initial: customInitial = null,
+    now: customNow = null,
+    feedback: customFeedback = null,
   } = options;
+
+  const now = typeof customNow === 'function' ? customNow : () => Date.now();
+  const fb = customFeedback || { onAchievement };
 
   let state = null;
   let clearing = null;
   let paused = false;
 
+  // Duration tracking in milliseconds (excluding paused time)
+  let accumulatedDurationMs = 0;
+  let lastActiveTime = now();
+  let hasHandledGameOver = false;
+
   if (initialState) {
     state = initialState;
+    hasHandledGameOver = Boolean(state.over);
   } else if (persist) {
     try {
       const saved = useProgress.getState().inProgress?.[mode];
@@ -74,6 +90,50 @@ export function createGameController(options = {}) {
     }
     const seed = typeof initialSeed === 'number' ? initialSeed : generateSeed();
     state = createGame({ seed, mode, initial });
+    hasHandledGameOver = Boolean(state.over);
+  }
+
+  function getDurationMs() {
+    if (paused || state.over) {
+      return accumulatedDurationMs;
+    }
+    return accumulatedDurationMs + Math.max(0, now() - lastActiveTime);
+  }
+
+  function unlockAchievements(unlockedIds) {
+    if (!Array.isArray(unlockedIds) || unlockedIds.length === 0) return;
+    for (let i = 0; i < unlockedIds.length; i++) {
+      const id = unlockedIds[i];
+      const nowIso = new Date().toISOString();
+      useProgress.getState().unlockAchievement(id, nowIso);
+      (fb.onAchievement || onAchievement)();
+      useToast.getState().showAchievementToast(id);
+    }
+  }
+
+  function handleGameOver(finalState) {
+    if (hasHandledGameOver || !finalState || !finalState.over) return;
+    hasHandledGameOver = true;
+
+    if (!paused) {
+      accumulatedDurationMs += Math.max(0, now() - lastActiveTime);
+    }
+    const durationMs = Math.round(accumulatedDurationMs);
+    const dayKey = getLocalDayKey(new Date());
+
+    const currentStats = useProgress.getState().stats;
+    const gameResult = buildGameResult(finalState, { durationMs, dayKey });
+    const nextStats = applyGameResult(currentStats, gameResult);
+    useProgress.getState().setStats(nextStats);
+
+    const currentUnlocked = useProgress.getState().achievements;
+    const statUnlocked = evaluate([], nextStats, {
+      unlocked: currentUnlocked,
+      mode: finalState.mode || mode,
+      score: finalState.score,
+      adventureLevel: null,
+    });
+    unlockAchievements(statUnlocked);
   }
 
   const stateSubscribers = new Set();
@@ -118,6 +178,7 @@ export function createGameController(options = {}) {
 
   function pause() {
     if (state.over || paused) return;
+    accumulatedDurationMs += Math.max(0, now() - lastActiveTime);
     paused = true;
     syncPersistence();
     notifyPause();
@@ -126,6 +187,7 @@ export function createGameController(options = {}) {
 
   function resume() {
     if (!paused) return;
+    lastActiveTime = now();
     paused = false;
     notifyPause();
     notifyState();
@@ -169,10 +231,27 @@ export function createGameController(options = {}) {
       useSettings.getState().setSeenOnboarding(true);
     }
 
+    // 1. Evaluate achievements after successful place()
+    const currentStats = useProgress.getState().stats;
+    const currentUnlocked = useProgress.getState().achievements;
+    const newlyUnlocked = evaluate(result.events, currentStats, {
+      unlocked: currentUnlocked,
+      mode: state.mode || mode,
+      score: state.score,
+      adventureLevel: null,
+    });
+    unlockAchievements(newlyUnlocked);
+
     notifyState();
     notifyEvents(result.events);
     playFeedbackForEvents(result.events.filter((e) => e.type !== 'gameOver'));
     syncPersistence();
+
+    // 2. When a game ends, apply game result and evaluate stat-based achievements
+    if (state.over) {
+      handleGameOver(state);
+    }
+
     return true;
   }
 
@@ -209,6 +288,9 @@ export function createGameController(options = {}) {
     const seed = typeof newSeed === 'number' ? newSeed : generateSeed();
     state = createGame({ seed, mode });
     clearing = null;
+    accumulatedDurationMs = 0;
+    lastActiveTime = now();
+    hasHandledGameOver = false;
     if (paused) {
       paused = false;
       notifyPause();
@@ -296,6 +378,9 @@ export function createGameController(options = {}) {
     subscribe,
     subscribeState,
     subscribePause,
+    getDurationMs: () => Math.round(getDurationMs()),
+    getDuration: () => Math.round(getDurationMs()),
+    handleGameOver: (s) => handleGameOver(s || state),
   };
 }
 
@@ -370,6 +455,7 @@ export function useGameController(options = {}) {
     hold: controller.hold,
     restart: controller.restart,
     subscribe: controller.subscribe,
+    getDurationMs: controller.getDurationMs,
   };
 }
 

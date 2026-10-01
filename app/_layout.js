@@ -12,6 +12,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme } from '../src/ui/theme';
+import Toast from '../src/ui/components/Toast';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -54,6 +55,7 @@ export default function RootLayout() {
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile' }} />
       </Stack>
+      <Toast />
     </GestureHandlerRootView>
   );
 }
