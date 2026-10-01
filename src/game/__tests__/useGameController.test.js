@@ -376,5 +376,149 @@ describe('createGameController', () => {
     expect(new Date(achievements.games_10).toISOString()).toBe(achievements.games_10);
     expect(mockFeedback.onAchievement).toHaveBeenCalled();
   });
+
+  describe('Blitz mode selection and controller behavior', () => {
+    test('mode blitz creates blitz game with timeLeftMs: 90000, lastPlaceAtMs: null', () => {
+      const controller = createGameController({
+        mode: 'blitz',
+        seed: 42,
+        autoStartTimer: false,
+      });
+
+      expect(controller.state.mode).toBe('blitz');
+      expect(controller.state.timeLeftMs).toBe(90000);
+      expect(controller.state.lastPlaceAtMs).toBeNull();
+      expect(controller.state.score).toBe(0);
+      expect(controller.state.board).toHaveLength(64);
+      expect(controller.state.tray).toHaveLength(3);
+    });
+
+    test('blitz mode does not restore from or save to inProgress', () => {
+      // Set saved state in progress
+      useProgress.getState().setInProgress('blitz', JSON.stringify({ score: 5000 }));
+      useProgress.getState().setInProgress('classic', JSON.stringify({ score: 2000 }));
+
+      const controller = createGameController({
+        mode: 'blitz',
+        seed: 42,
+        persist: true,
+        autoStartTimer: false,
+      });
+
+      // Does not restore from inProgress.blitz
+      expect(controller.state.score).toBe(0);
+
+      // Making a placement does not write to inProgress.blitz
+      controller.place(0, 0, 0);
+      expect(useProgress.getState().inProgress.blitz).toBe(JSON.stringify({ score: 5000 }));
+
+      // Pause does not write to inProgress.blitz either
+      controller.pause();
+      expect(useProgress.getState().inProgress.blitz).toBe(JSON.stringify({ score: 5000 }));
+    });
+
+    test('blitz place uses placeBlitz: line clear adds +2000ms time bonus', () => {
+      let mockTime = 10000;
+      const mockNow = () => mockTime;
+
+      const testState = createGame({ seed: 123, mode: 'blitz' });
+      testState.timeLeftMs = 80000;
+      testState.lastPlaceAtMs = null;
+      // Row 0 has cols 0-6 filled
+      for (let c = 0; c < 7; c++) {
+        testState.board[c] = { color: 1, kind: 'normal', hp: 1 };
+      }
+      testState.tray[0] = { id: 'line_1x1', color: 1 };
+
+      const controller = createGameController({
+        mode: 'blitz',
+        initialState: testState,
+        now: mockNow,
+        autoStartTimer: false,
+      });
+
+      const placed = controller.place(0, 0, 7);
+      expect(placed).toBe(true);
+      // Cleared 1 line -> +2000ms
+      expect(controller.state.timeLeftMs).toBe(82000);
+      expect(controller.state.lastPlaceAtMs).toBe(10000);
+    });
+
+    test('blitz place awards speed bonus when placed within 1500ms of previous placement', () => {
+      let mockTime = 10000;
+      const mockNow = () => mockTime;
+
+      const testState = createGame({ seed: 123, mode: 'blitz' });
+      testState.timeLeftMs = 90000;
+      testState.lastPlaceAtMs = null;
+      testState.tray[0] = { id: 'line_1x1', color: 0 };
+      testState.tray[1] = { id: 'line_1x1', color: 1 };
+
+      const controller = createGameController({
+        mode: 'blitz',
+        initialState: testState,
+        now: mockNow,
+        autoStartTimer: false,
+      });
+
+      // First drop at 10000ms
+      controller.place(0, 0, 0);
+      expect(controller.state.score).toBe(1); // 1 cell placed
+
+      // Second drop at 11000ms (1000ms later, inside 1500ms window)
+      mockTime = 11000;
+      controller.place(1, 0, 1);
+      // Base placement: 1 pt. 50% bonus = round(0.5) = 1 pt. Total added: 2 pts -> score: 3
+      expect(controller.state.score).toBe(3);
+    });
+
+    test('blitz tick advances timer, and triggers gameOver with timeUp at 0', () => {
+      let mockTime = 10000;
+      const mockNow = () => mockTime;
+
+      const controller = createGameController({
+        mode: 'blitz',
+        seed: 42,
+        now: mockNow,
+        autoStartTimer: false,
+      });
+
+      expect(controller.state.timeLeftMs).toBe(90000);
+
+      // Tick 5000ms
+      mockTime += 5000;
+      controller.tick();
+      expect(controller.state.timeLeftMs).toBe(85000);
+      expect(controller.state.over).toBe(false);
+
+      // Tick remaining 85000ms
+      mockTime += 85000;
+      controller.tick();
+      expect(controller.state.timeLeftMs).toBe(0);
+      expect(controller.state.over).toBe(true);
+      expect(controller.state.overReason).toBe('timeUp');
+
+      // Best blitz score and blitz games played recorded in stats
+      const stats = useProgress.getState().stats;
+      expect(stats.gamesPlayed.blitz).toBe(1);
+    });
+
+    test('blitz restart creates fresh game with full 90s timer', () => {
+      const controller = createGameController({
+        mode: 'blitz',
+        seed: 42,
+        autoStartTimer: false,
+      });
+
+      controller.tick(30000);
+      expect(controller.state.timeLeftMs).toBe(60000);
+
+      controller.restart(999);
+      expect(controller.state.timeLeftMs).toBe(90000);
+      expect(controller.state.score).toBe(0);
+      expect(controller.state.over).toBe(false);
+    });
+  });
 });
+
 

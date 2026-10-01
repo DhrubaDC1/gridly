@@ -7,6 +7,12 @@ import {
   serializeGame,
   restoreGame,
 } from '../engine/game';
+import {
+  createBlitzGame,
+  placeBlitz,
+  tick as blitzTick,
+} from '../engine/modes/blitz';
+import { calculateElapsed } from './timer';
 import { evaluate } from '../engine/achievements';
 import { applyGameResult } from '../engine/stats';
 import { useProgress } from '../store/useProgress';
@@ -44,12 +50,14 @@ export function createGameController(options = {}) {
     seed: initialSeed,
     mode = 'classic',
     initialState = null,
-    persist = true,
+    persist: persistOption = true,
     initial: customInitial = null,
     now: customNow = null,
     feedback: customFeedback = null,
+    autoStartTimer = true,
   } = options;
 
+  const persist = mode === 'blitz' ? false : persistOption;
   const now = typeof customNow === 'function' ? customNow : () => Date.now();
   const fb = customFeedback || { onAchievement };
 
@@ -60,7 +68,9 @@ export function createGameController(options = {}) {
   // Duration tracking in milliseconds (excluding paused time)
   let accumulatedDurationMs = 0;
   let lastActiveTime = now();
+  let lastTickTime = now();
   let hasHandledGameOver = false;
+  let timerInterval = null;
 
   if (initialState) {
     state = initialState;
@@ -89,8 +99,69 @@ export function createGameController(options = {}) {
       }
     }
     const seed = typeof initialSeed === 'number' ? initialSeed : generateSeed();
-    state = createGame({ seed, mode, initial });
+    state = mode === 'blitz'
+      ? createBlitzGame({ seed, initial })
+      : createGame({ seed, mode, initial });
     hasHandledGameOver = Boolean(state.over);
+  }
+
+  function tick(forcedElapsedMs) {
+    if (state.over || paused) {
+      return { state, events: [] };
+    }
+
+    const currentTime = now();
+    const elapsed =
+      typeof forcedElapsedMs === 'number'
+        ? forcedElapsedMs
+        : calculateElapsed(lastTickTime, currentTime);
+    lastTickTime = currentTime;
+
+    if (elapsed <= 0) {
+      return { state, events: [] };
+    }
+
+    if (mode === 'blitz') {
+      const result = blitzTick(state, elapsed);
+      if (result.state !== state) {
+        state = result.state;
+        notifyState();
+        if (result.events && result.events.length > 0) {
+          notifyEvents(result.events);
+        }
+        if (state.over) {
+          stopTimer();
+          handleGameOver(state);
+        }
+      }
+      return result;
+    }
+
+    return { state, events: [] };
+  }
+
+  function startTimer() {
+    if (mode !== 'blitz' || timerInterval !== null || state.over || paused) {
+      return;
+    }
+    lastTickTime = now();
+    timerInterval = setInterval(() => {
+      tick();
+    }, 100);
+    if (timerInterval && typeof timerInterval.unref === 'function') {
+      timerInterval.unref();
+    }
+  }
+
+  function stopTimer() {
+    if (timerInterval !== null) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  if (mode === 'blitz' && autoStartTimer && !state.over && !paused) {
+    startTimer();
   }
 
   function getDurationMs() {
@@ -186,6 +257,7 @@ export function createGameController(options = {}) {
     if (state.over || paused) return;
     accumulatedDurationMs += Math.max(0, now() - lastActiveTime);
     paused = true;
+    stopTimer();
     syncPersistence();
     notifyPause();
     notifyState();
@@ -194,7 +266,11 @@ export function createGameController(options = {}) {
   function resume() {
     if (!paused) return;
     lastActiveTime = now();
+    lastTickTime = now();
     paused = false;
+    if (mode === 'blitz' && autoStartTimer && !state.over) {
+      startTimer();
+    }
     notifyPause();
     notifyState();
   }
@@ -222,7 +298,10 @@ export function createGameController(options = {}) {
     }
 
     const prevState = state;
-    const result = placePiece(state, source, row, col);
+    const result =
+      mode === 'blitz'
+        ? placeBlitz(state, source, row, col, now())
+        : placePiece(state, source, row, col);
     if (result.state === state || result.events.length === 0) {
       return false;
     }
@@ -233,7 +312,7 @@ export function createGameController(options = {}) {
     const hasClear = result.events.some(
       (e) => e.type === 'cleared' && e.linesCount > 0
     );
-    if (hasClear && !useSettings.getState().seenOnboarding) {
+    if (hasClear && !useSettings.getState().seenOnboarding && mode === 'classic') {
       useSettings.getState().setSeenOnboarding(true);
     }
 
@@ -255,6 +334,7 @@ export function createGameController(options = {}) {
 
     // 2. When a game ends, apply game result and evaluate stat-based achievements
     if (state.over) {
+      stopTimer();
       handleGameOver(state);
     }
 
@@ -291,11 +371,16 @@ export function createGameController(options = {}) {
    * @param {number} [newSeed]
    */
   function restart(newSeed) {
+    stopTimer();
     const seed = typeof newSeed === 'number' ? newSeed : generateSeed();
-    state = createGame({ seed, mode });
+    state =
+      mode === 'blitz'
+        ? createBlitzGame({ seed })
+        : createGame({ seed, mode });
     clearing = null;
     accumulatedDurationMs = 0;
     lastActiveTime = now();
+    lastTickTime = now();
     hasHandledGameOver = false;
     if (paused) {
       paused = false;
@@ -305,6 +390,9 @@ export function createGameController(options = {}) {
 
     if (persist) {
       useProgress.getState().clearInProgress(mode);
+    }
+    if (mode === 'blitz' && autoStartTimer && !state.over) {
+      startTimer();
     }
   }
 
@@ -381,6 +469,15 @@ export function createGameController(options = {}) {
     place,
     hold,
     restart,
+    tick,
+    startTimer,
+    stopTimer,
+    destroy: () => {
+      stopTimer();
+      stateSubscribers.clear();
+      eventSubscribers.clear();
+      pauseSubscribers.clear();
+    },
     subscribe,
     subscribeState,
     subscribePause,
@@ -405,6 +502,7 @@ export function createGameController(options = {}) {
  *   place: (source: number | 'hold', row: number, col: number) => boolean,
  *   hold: (trayIndex: number) => boolean,
  *   restart: (newSeed?: number) => void,
+ *   tick: (elapsedMs?: number) => Object,
  *   subscribe: (listener: (events: Array<Object>) => void) => () => void,
  * }}
  */
@@ -444,6 +542,12 @@ export function useGameController(options = {}) {
     }
   }, [controller]);
 
+  useEffect(() => {
+    return () => {
+      controller.stopTimer();
+    };
+  }, [controller]);
+
   const onClearingComplete = () => {
     controller.clearClearing();
     setClearing(null);
@@ -460,6 +564,7 @@ export function useGameController(options = {}) {
     place: controller.place,
     hold: controller.hold,
     restart: controller.restart,
+    tick: controller.tick,
     subscribe: controller.subscribe,
     getDurationMs: controller.getDurationMs,
   };

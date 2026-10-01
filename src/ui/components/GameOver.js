@@ -32,11 +32,15 @@ import { getHighlightStat } from '../../game/statsHighlight';
  * @param {() => void} [props.onHome]
  * @param {() => void} [props.onQuit]
  * @param {boolean} [props.reduceMotion]
+ * @param {string} [props.mode='classic']
+ * @param {string | null} [props.overReason]
  * @param {any} [props.theme]
  * @param {any} [props.feedback]
  */
 export default function GameOver({
   visible = true,
+  mode = 'classic',
+  overReason = null,
   score = 0,
   stats = null,
   previousBestScore,
@@ -50,6 +54,7 @@ export default function GameOver({
 }) {
   const defaultTheme = useTheme();
   const theme = customTheme || defaultTheme;
+  const modeKey = mode || 'classic';
 
   const systemReduceMotion = useReduceMotion();
   const reduceMotion =
@@ -66,7 +71,7 @@ export default function GameOver({
     if (typeof previousBestScore === 'number') {
       return previousBestScore;
     }
-    return useProgress.getState().stats?.bestScore?.classic ?? 0;
+    return useProgress.getState().stats?.bestScore?.[modeKey] ?? 0;
   });
 
   const prevVisibleRef = useRef(visible);
@@ -75,11 +80,11 @@ export default function GameOver({
       const best =
         typeof previousBestScore === 'number'
           ? previousBestScore
-          : useProgress.getState().stats?.bestScore?.classic ?? 0;
+          : useProgress.getState().stats?.bestScore?.[modeKey] ?? 0;
       setBaselineBest(best);
     }
     prevVisibleRef.current = visible;
-  }, [visible, previousBestScore]);
+  }, [visible, previousBestScore, modeKey]);
 
   const isNewBest = score > baselineBest && score > 0;
   const displayBest = Math.max(baselineBest, score);
@@ -120,20 +125,22 @@ export default function GameOver({
       // 4. Call feedback.onGameOver once
       feedback?.onGameOver?.();
 
-      // 5. Update best Classic score once per game and clear inProgress.classic
+      // 5. Update best score once per game and clear inProgress for classic
       const progress = useProgress.getState();
-      const currentBest = progress.stats?.bestScore?.classic ?? 0;
+      const currentBest = progress.stats?.bestScore?.[modeKey] ?? 0;
       if (score > currentBest) {
         progress.updateStats({
           bestScore: {
             ...progress.stats.bestScore,
-            classic: score,
+            [modeKey]: score,
           },
         });
       }
-      progress.clearInProgress('classic');
+      if (modeKey === 'classic') {
+        progress.clearInProgress('classic');
+      }
     }
-  }, [visible, score, feedback]);
+  }, [visible, score, feedback, modeKey]);
 
   const animatedCardStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -143,6 +150,8 @@ export default function GameOver({
   if (!visible) {
     return null;
   }
+
+  const title = overReason === 'timeUp' ? "Time's up" : 'Game over';
 
   return (
     <View style={styles.overlay} testID="game-over-overlay">
@@ -154,7 +163,7 @@ export default function GameOver({
         ]}
         testID="game-over-card"
       >
-        <Text style={[styles.title, { color: theme.ink }]}>Game over</Text>
+        <Text style={[styles.title, { color: theme.ink }]}>{title}</Text>
 
         <Text
           style={[styles.score, { color: theme.ink }]}

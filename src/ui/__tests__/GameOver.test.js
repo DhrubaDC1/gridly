@@ -288,4 +288,60 @@ describe('GameOver component', () => {
     // withTiming(0) for translateY should not have been called because translateY stays 0
     expect(Reanimated.withTiming).not.toHaveBeenCalledWith(0, expect.anything());
   });
+
+  test('blitz mode: renders "Time\'s up" when overReason is timeUp and updates best Blitz score', () => {
+    useProgress.getState().updateStats({
+      bestScore: { classic: 1000, blitz: 1500, adventure: 0 },
+    });
+
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <GameOver
+          visible={true}
+          mode="blitz"
+          overReason="timeUp"
+          score={2800}
+          onPlayAgain={jest.fn()}
+          onHome={jest.fn()}
+        />
+      );
+    });
+
+    const root = tree.root;
+    const texts = root.findAllByType('Text').map((t) => t.props.children);
+
+    expect(texts).toContain("Time's up");
+    expect(texts).not.toContain('Game over');
+    expect(texts).toContain('2,800');
+    expect(texts).toContain('best 2,800');
+    expect(texts).toContain('New best');
+
+    expect(useProgress.getState().stats.bestScore.blitz).toBe(2800);
+    // Classic best score should remain unchanged
+    expect(useProgress.getState().stats.bestScore.classic).toBe(1000);
+  });
+
+  test('blitz mode: renders "Game over" when overReason is not timeUp (e.g. noMoves)', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <GameOver
+          visible={true}
+          mode="blitz"
+          overReason="noMoves"
+          score={500}
+          onPlayAgain={jest.fn()}
+          onHome={jest.fn()}
+        />
+      );
+    });
+
+    const root = tree.root;
+    const texts = root.findAllByType('Text').map((t) => t.props.children);
+
+    expect(texts).toContain('Game over');
+    expect(texts).not.toContain("Time's up");
+  });
 });
+

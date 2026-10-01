@@ -70,4 +70,28 @@ describe('HomeScreen navigation links', () => {
       tree.unmount();
     });
   });
+
+  test('clicking Play Blitz link navigates to /blitz', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(<HomeScreen />);
+    });
+
+    const blitzBtn = tree.root.findByProps({
+      accessibilityLabel: 'Play Blitz mode',
+    });
+    expect(blitzBtn).toBeDefined();
+
+    act(() => {
+      blitzBtn.props.onPress();
+    });
+
+    const router = useRouter();
+    expect(router.push).toHaveBeenCalledWith('/blitz');
+
+    act(() => {
+      tree.unmount();
+    });
+  });
 });
+
