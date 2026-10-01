@@ -1,4 +1,4 @@
-import { createRng } from '../rng';
+import { createRng, createRngFromState } from '../rng';
 
 describe('RNG (mulberry32)', () => {
   it('generates the same sequence for the same seed', () => {
@@ -60,5 +60,22 @@ describe('RNG (mulberry32)', () => {
     const rng = createRng(100);
     expect(rng.int(0)).toBe(0);
     expect(rng.int(-5)).toBe(0);
+  });
+
+  it('saves state and restores identical subsequent sequence', () => {
+    const rng1 = createRng(777);
+    // Draw several values
+    rng1.next();
+    rng1.int(10);
+    rng1.next();
+
+    const savedState = rng1.getState();
+    const rng2 = createRngFromState(savedState);
+
+    const seq1 = [rng1.next(), rng1.int(50), rng1.next()];
+    const seq2 = [rng2.next(), rng2.int(50), rng2.next()];
+
+    expect(seq1).toEqual(seq2);
+    expect(rng1.getState()).toBe(rng2.getState());
   });
 });

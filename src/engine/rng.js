@@ -8,13 +8,13 @@
  */
 
 /**
- * Creates a mulberry32 seeded pseudo-random number generator.
+ * Creates a mulberry32 seeded pseudo-random number generator from a saved internal state.
  *
- * @param {number} seed - Integer seed value.
- * @returns {Rng}
+ * @param {number} savedState - Internal 32-bit state.
+ * @returns {Rng & { getState: () => number }}
  */
-export function createRng(seed = 0) {
-  let s = (seed >>> 0) || 1;
+export function createRngFromState(savedState) {
+  let s = savedState !== undefined ? (savedState >>> 0) : 1;
 
   function next() {
     s = (s + 0x6d2b79f5) >>> 0;
@@ -30,5 +30,20 @@ export function createRng(seed = 0) {
     return Math.floor(next() * maxExclusive);
   }
 
-  return { next, int };
+  function getState() {
+    return s;
+  }
+
+  return { next, int, getState };
 }
+
+/**
+ * Creates a mulberry32 seeded pseudo-random number generator.
+ *
+ * @param {number} seed - Integer seed value.
+ * @returns {Rng & { getState: () => number }}
+ */
+export function createRng(seed = 0) {
+  return createRngFromState((seed >>> 0) || 1);
+}
+
