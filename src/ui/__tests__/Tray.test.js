@@ -294,4 +294,150 @@ describe('Tray and TraySlot components', () => {
 
     expect(mockOnPickup).toHaveBeenCalledTimes(1);
   });
+
+  test('TraySlot has idle elevation of 0 so no Android shadow appears', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <TraySlot
+          slotIndex={0}
+          piece={samplePiece}
+          slotWidth={80}
+          slotHeight={96}
+          cellSize={35}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={{ value: 0 }}
+          slotBoardOffsetY={{ value: 0 }}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          theme={theme}
+        />
+      );
+    });
+
+    const root = tree.root;
+    const views = root.findAllByType(require('react-native').View);
+    // Find the slotWrapper (the outermost View inside GestureDetector)
+    const slotWrapper = views[0];
+    expect(slotWrapper.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ elevation: 0 }),
+      ])
+    );
+  });
+
+  test('TraySlot scales 1x5 and 5x1 pieces to sit fully inside slot dimensions', () => {
+    const piece1x5 = {
+      id: 'line_1x5',
+      color: 0,
+      cells: [
+        [0, 0],
+        [0, 1],
+        [0, 2],
+        [0, 3],
+        [0, 4],
+      ],
+    };
+    const piece5x1 = {
+      id: 'line_5x1',
+      color: 1,
+      cells: [
+        [0, 0],
+        [1, 0],
+        [2, 0],
+        [3, 0],
+        [4, 0],
+      ],
+    };
+
+    // 1x5 test
+    let tree1x5;
+    act(() => {
+      tree1x5 = renderer.create(
+        <TraySlot
+          slotIndex={0}
+          piece={piece1x5}
+          slotWidth={90}
+          slotHeight={96}
+          cellSize={44}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={{ value: 0 }}
+          slotBoardOffsetY={{ value: 0 }}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          theme={theme}
+        />
+      );
+    });
+
+    const views1x5 = tree1x5.root.findAllByType(require('react-native').View);
+    const pieceWrapper1x5 = views1x5.find(
+      (v) =>
+        Array.isArray(v.props.style) &&
+        v.props.style.some(
+          (s) =>
+            s &&
+            Array.isArray(s.transform) &&
+            s.transform.some((t) => typeof t.scale === 'number')
+        )
+    );
+    expect(pieceWrapper1x5).toBeDefined();
+    const transform1x5 = pieceWrapper1x5.props.style.find(
+      (s) => s && Array.isArray(s.transform)
+    );
+    const scale1x5 = transform1x5.transform.find((t) => typeof t.scale === 'number').scale;
+    // pieceWidth = 232, expected = (90 - 16) / 232 = 74 / 232 ≈ 0.3189655
+    expect(scale1x5).toBeCloseTo(74 / 232, 5);
+    expect(scale1x5).toBeLessThan(0.55);
+    // Scaled width fits inside slotWidth - 16
+    expect(232 * scale1x5).toBeLessThanOrEqual(90 - 16);
+
+    // 5x1 test
+    let tree5x1;
+    act(() => {
+      tree5x1 = renderer.create(
+        <TraySlot
+          slotIndex={1}
+          piece={piece5x1}
+          slotWidth={90}
+          slotHeight={96}
+          cellSize={44}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={{ value: 0 }}
+          slotBoardOffsetY={{ value: 0 }}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          theme={theme}
+        />
+      );
+    });
+
+    const views5x1 = tree5x1.root.findAllByType(require('react-native').View);
+    const pieceWrapper5x1 = views5x1.find(
+      (v) =>
+        Array.isArray(v.props.style) &&
+        v.props.style.some(
+          (s) =>
+            s &&
+            Array.isArray(s.transform) &&
+            s.transform.some((t) => typeof t.scale === 'number')
+        )
+    );
+    expect(pieceWrapper5x1).toBeDefined();
+    const transform5x1 = pieceWrapper5x1.props.style.find(
+      (s) => s && Array.isArray(s.transform)
+    );
+    const scale5x1 = transform5x1.transform.find((t) => typeof t.scale === 'number').scale;
+    // pieceHeight = 232, expected = (96 - 16) / 232 = 80 / 232 ≈ 0.3448275
+    expect(scale5x1).toBeCloseTo(80 / 232, 5);
+    expect(scale5x1).toBeLessThan(0.55);
+    // Scaled height fits inside slotHeight - 16
+    expect(232 * scale5x1).toBeLessThanOrEqual(96 - 16);
+  });
 });

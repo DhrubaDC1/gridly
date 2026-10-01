@@ -8,11 +8,11 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import Piece from './Piece';
-import { getPieceDimensions } from '../boardLayout';
+import { getPieceDimensions, calculateRestScale } from '../boardLayout';
 import { canPlace } from '../../engine/board';
 
 /**
- * HoldSlot component rendering one held piece at 55% scale or a subtle empty state.
+ * HoldSlot component rendering one held piece at rest scale or a subtle empty state.
  * Supports drag & drop onto the board, and visual highlight when hovered by a tray piece.
  *
  * @param {Object} props
@@ -54,6 +54,19 @@ function HoldSlot({
   reduceMotion = false,
   theme,
 }) {
+  const { width: pieceWidth, height: pieceHeight } = getPieceDimensions(
+    piece,
+    cellSize,
+    gap
+  );
+
+  const restScale = calculateRestScale(
+    pieceWidth,
+    pieceHeight,
+    slotWidth,
+    slotHeight
+  );
+
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const translationX = useSharedValue(0);
@@ -63,7 +76,7 @@ function HoldSlot({
   const liftProgress = useSharedValue(0);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const scale = useSharedValue(0.55);
+  const scale = useSharedValue(restScale);
   const pieceOpacity = useSharedValue(1);
   const isDragging = useSharedValue(false);
   const lastRow = useSharedValue(-999);
@@ -73,12 +86,6 @@ function HoldSlot({
   const pickupDuration = reduceMotion ? 60 : 120;
   const snapDuration = reduceMotion ? 45 : 90;
   const returnDuration = reduceMotion ? 110 : 220;
-
-  const { width: pieceWidth, height: pieceHeight } = getPieceDimensions(
-    piece,
-    cellSize,
-    gap
-  );
 
   const pieceKey = piece ? `${piece.id}-${piece.color}` : null;
   const prevPieceKeyRef = useRef(pieceKey);
@@ -91,12 +98,14 @@ function HoldSlot({
         translateY.value = 0;
         translationX.value = 0;
         translationY.value = 0;
-        scale.value = 0.55;
+        scale.value = restScale;
         pieceOpacity.value = 1;
         liftProgress.value = 0;
       }
+    } else if (!isDragging.value && scale.value !== restScale) {
+      scale.value = restScale;
     }
-  }, [pieceKey]);
+  }, [pieceKey, restScale]);
 
   const onPlaceRef = useRef(onPlace);
   onPlaceRef.current = onPlace;
@@ -209,7 +218,7 @@ function HoldSlot({
           liftOffsetX.value * liftProgress.value + translationX.value;
         const curY =
           liftOffsetY.value * liftProgress.value + translationY.value;
-        const curScale = 0.55 + 0.45 * liftProgress.value;
+        const curScale = restScale + (1 - restScale) * liftProgress.value;
 
         translateX.value = curX;
         translateY.value = curY;
@@ -247,7 +256,7 @@ function HoldSlot({
           ghost.ghostOpacity.value = 0;
           translateX.value = withTiming(0, { duration: returnDuration });
           translateY.value = withTiming(0, { duration: returnDuration });
-          scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
+          scale.value = withTiming(restScale, { duration: returnDuration }, (finished) => {
             if (finished) {
               runOnJS(handleDragEndJS)();
             }
@@ -261,7 +270,7 @@ function HoldSlot({
           ghost.ghostOpacity.value = 0;
           translateX.value = withTiming(0, { duration: returnDuration });
           translateY.value = withTiming(0, { duration: returnDuration });
-          scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
+          scale.value = withTiming(restScale, { duration: returnDuration }, (finished) => {
             if (finished) {
               runOnJS(handleDragEndJS)();
             }
@@ -277,6 +286,7 @@ function HoldSlot({
     padding,
     pieceWidth,
     pieceHeight,
+    restScale,
     pickupDuration,
     snapDuration,
     returnDuration,
@@ -287,7 +297,7 @@ function HoldSlot({
 
   const animatedSlotWrapperStyle = useAnimatedStyle(() => ({
     zIndex: isDragging.value ? 9999 : 1,
-    elevation: isDragging.value ? 9999 : 1,
+    elevation: isDragging.value ? 9999 : 0,
   }));
 
   const animatedPieceStyle = useAnimatedStyle(() => {
@@ -298,7 +308,7 @@ function HoldSlot({
     if (isDragging.value) {
       curX = liftOffsetX.value * liftProgress.value + translationX.value;
       curY = liftOffsetY.value * liftProgress.value + translationY.value;
-      curScale = 0.55 + 0.45 * liftProgress.value;
+      curScale = restScale + (1 - restScale) * liftProgress.value;
     } else {
       curX = translateX.value;
       curY = translateY.value;
@@ -376,7 +386,7 @@ function HoldSlot({
           </View>
         )}
 
-        {/* Held piece displayed at 55% scale */}
+        {/* Held piece displayed at rest scale */}
         {piece && (
           <Animated.View
             style={[

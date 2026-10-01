@@ -8,11 +8,11 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import Piece from './Piece';
-import { getPieceDimensions } from '../boardLayout';
+import { getPieceDimensions, calculateRestScale } from '../boardLayout';
 import { canPlace } from '../../engine/board';
 
 /**
- * Single Tray Slot displaying one piece at 55% scale with drag & drop handling.
+ * Single Tray Slot displaying one piece at rest scale with drag & drop handling.
  *
  * @param {Object} props
  * @param {number} props.slotIndex
@@ -65,6 +65,28 @@ function TraySlot({
   reduceMotion,
   theme,
 }) {
+  const { width: pieceWidth, height: pieceHeight } = getPieceDimensions(
+    piece,
+    cellSize,
+    gap
+  );
+
+  const restScale = calculateRestScale(
+    pieceWidth,
+    pieceHeight,
+    slotWidth,
+    slotHeight
+  );
+
+  const targetHoldWidth = holdWidth ?? slotWidth;
+  const targetHoldHeight = holdHeight ?? slotHeight;
+  const targetHoldRestScale = calculateRestScale(
+    pieceWidth,
+    pieceHeight,
+    targetHoldWidth,
+    targetHoldHeight
+  );
+
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const translationX = useSharedValue(0);
@@ -74,7 +96,7 @@ function TraySlot({
   const liftProgress = useSharedValue(0);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const scale = useSharedValue(0.55);
+  const scale = useSharedValue(restScale);
   const pieceOpacity = useSharedValue(1);
   const isDragging = useSharedValue(false);
   const lastRow = useSharedValue(-999);
@@ -85,12 +107,6 @@ function TraySlot({
   const pickupDuration = reduceMotion ? 60 : 120;
   const snapDuration = reduceMotion ? 45 : 90;
   const returnDuration = reduceMotion ? 110 : 220;
-
-  const { width: pieceWidth, height: pieceHeight } = getPieceDimensions(
-    piece,
-    cellSize,
-    gap
-  );
 
   const pieceKey = piece ? `${piece.id}-${piece.color}` : null;
   const prevPieceKeyRef = useRef(pieceKey);
@@ -104,13 +120,15 @@ function TraySlot({
         translateY.value = 0;
         translationX.value = 0;
         translationY.value = 0;
-        scale.value = 0.55;
+        scale.value = restScale;
         pieceOpacity.value = 1;
         liftProgress.value = 0;
         isOverHoldSlot.value = false;
       }
+    } else if (!isDragging.value && scale.value !== restScale) {
+      scale.value = restScale;
     }
-  }, [pieceKey]);
+  }, [pieceKey, restScale]);
 
   const onPlaceRef = useRef(onPlace);
   onPlaceRef.current = onPlace;
@@ -271,7 +289,7 @@ function TraySlot({
           liftOffsetX.value * liftProgress.value + translationX.value;
         const curY =
           liftOffsetY.value * liftProgress.value + translationY.value;
-        const curScale = 0.55 + 0.45 * liftProgress.value;
+        const curScale = restScale + (1 - restScale) * liftProgress.value;
 
         translateX.value = curX;
         translateY.value = curY;
@@ -292,7 +310,7 @@ function TraySlot({
             (slotHoldOffsetY?.value ?? 0) + (targetHoldHeight - pieceHeight) / 2;
 
           ghost.ghostOpacity.value = 0;
-          scale.value = withTiming(0.55, { duration: snapDuration });
+          scale.value = withTiming(targetHoldRestScale, { duration: snapDuration });
           translateX.value = withTiming(targetSnapX, { duration: snapDuration });
           translateY.value = withTiming(
             targetSnapY,
@@ -344,7 +362,7 @@ function TraySlot({
           ghost.ghostOpacity.value = 0;
           translateX.value = withTiming(0, { duration: returnDuration });
           translateY.value = withTiming(0, { duration: returnDuration });
-          scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
+          scale.value = withTiming(restScale, { duration: returnDuration }, (finished) => {
             if (finished) {
               runOnJS(handleDragEndJS)();
             }
@@ -359,7 +377,7 @@ function TraySlot({
           ghost.ghostOpacity.value = 0;
           translateX.value = withTiming(0, { duration: returnDuration });
           translateY.value = withTiming(0, { duration: returnDuration });
-          scale.value = withTiming(0.55, { duration: returnDuration }, (finished) => {
+          scale.value = withTiming(restScale, { duration: returnDuration }, (finished) => {
             if (finished) {
               runOnJS(handleDragEndJS)();
             }
@@ -376,6 +394,8 @@ function TraySlot({
     padding,
     pieceWidth,
     pieceHeight,
+    restScale,
+    targetHoldRestScale,
     canHold,
     holdWidth,
     holdHeight,
@@ -392,7 +412,7 @@ function TraySlot({
 
   const animatedSlotWrapperStyle = useAnimatedStyle(() => ({
     zIndex: isDragging.value ? 9999 : 1,
-    elevation: isDragging.value ? 9999 : 1,
+    elevation: isDragging.value ? 9999 : 0,
   }));
 
   const animatedPieceStyle = useAnimatedStyle(() => {
@@ -403,7 +423,7 @@ function TraySlot({
     if (isDragging.value) {
       curX = liftOffsetX.value * liftProgress.value + translationX.value;
       curY = liftOffsetY.value * liftProgress.value + translationY.value;
-      curScale = 0.55 + 0.45 * liftProgress.value;
+      curScale = restScale + (1 - restScale) * liftProgress.value;
     } else {
       curX = translateX.value;
       curY = translateY.value;

@@ -227,3 +227,74 @@ export function getPieceDimensions(piece, cellSize, gap = DEFAULT_CELL_GAP) {
   return { numRows, numCols, width, height, minR, minC };
 }
 
+/**
+ * Calculates the rest scale for a piece inside a tray or hold slot.
+ * Ensures pieces sit at up to 0.55 scale, scaling down when the piece's full width or height
+ * exceeds (slotWidth - 16) or (slotHeight - 16) so that large pieces sit fully inside the slot.
+ *
+ * Formula: min(0.55, (slotWidth - 16) / pieceWidth, (slotHeight - 16) / pieceHeight)
+ *
+ * @param {number | { width: number, height: number } | { cells: Array<any> }} pieceOrWidth
+ * @param {number} [pieceHeightOrSlotWidth]
+ * @param {number} [slotWidthOrHeight]
+ * @param {number} [slotHeightOrCellSize]
+ * @param {number} [gap]
+ * @returns {number}
+ */
+export function calculateRestScale(
+  pieceOrWidth,
+  pieceHeightOrSlotWidth,
+  slotWidthOrHeight,
+  slotHeightOrCellSize,
+  gap
+) {
+  'worklet';
+  let pieceWidth;
+  let pieceHeight;
+  let slotWidth;
+  let slotHeight;
+
+  if (typeof pieceOrWidth === 'object' && pieceOrWidth !== null) {
+    if ('cells' in pieceOrWidth) {
+      const cellSize = slotHeightOrCellSize ?? BASE_CELL_SIZE;
+      const pieceGap = gap ?? DEFAULT_CELL_GAP;
+      const dims = getPieceDimensions(pieceOrWidth, cellSize, pieceGap);
+      pieceWidth = dims.width;
+      pieceHeight = dims.height;
+      slotWidth = pieceHeightOrSlotWidth;
+      slotHeight = slotWidthOrHeight;
+    } else {
+      pieceWidth = pieceOrWidth.pieceWidth ?? pieceOrWidth.width;
+      pieceHeight = pieceOrWidth.pieceHeight ?? pieceOrWidth.height;
+      slotWidth = pieceOrWidth.slotWidth;
+      slotHeight = pieceOrWidth.slotHeight;
+    }
+  } else {
+    pieceWidth = pieceOrWidth;
+    pieceHeight = pieceHeightOrSlotWidth;
+    slotWidth = slotWidthOrHeight;
+    slotHeight = slotHeightOrCellSize;
+  }
+
+  if (
+    typeof pieceWidth !== 'number' ||
+    typeof pieceHeight !== 'number' ||
+    pieceWidth <= 0 ||
+    pieceHeight <= 0 ||
+    typeof slotWidth !== 'number' ||
+    typeof slotHeight !== 'number' ||
+    slotWidth <= 0 ||
+    slotHeight <= 0
+  ) {
+    return 0.55;
+  }
+
+  const scaleX = (slotWidth - 16) / pieceWidth;
+  const scaleY = (slotHeight - 16) / pieceHeight;
+
+  return Math.min(0.55, scaleX, scaleY);
+}
+
+export const getRestScale = calculateRestScale;
+export const restScale = calculateRestScale;
+

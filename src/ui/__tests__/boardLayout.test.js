@@ -17,7 +17,11 @@ import {
   getBoardMetrics,
   getCellAtPosition,
   getPieceDimensions,
+  calculateRestScale,
+  getRestScale,
+  restScale,
 } from '../boardLayout';
+import { getPiece } from '../../engine/pieces';
 
 describe('boardLayout', () => {
   test('constants match AGENTS.md specs', () => {
@@ -161,6 +165,137 @@ describe('boardLayout', () => {
       height: 0,
       minR: 0,
       minC: 0,
+    });
+  });
+
+  describe('calculateRestScale', () => {
+    const cellSize = 44;
+    const gap = 3;
+    const slotWidth = 90;
+    const slotHeight = 96;
+
+    test('1x1 piece scales to max rest scale of 0.55', () => {
+      const piece1x1 = getPiece('line_1x1');
+      const dims = getPieceDimensions(piece1x1, cellSize, gap);
+      expect(dims.width).toBe(44);
+      expect(dims.height).toBe(44);
+
+      const scale = calculateRestScale(dims.width, dims.height, slotWidth, slotHeight);
+      expect(scale).toBe(0.55);
+
+      // Also works when passing piece object directly
+      const scaleFromPiece = calculateRestScale(piece1x1, slotWidth, slotHeight, cellSize, gap);
+      expect(scaleFromPiece).toBe(0.55);
+
+      // Fits well within slot
+      expect(dims.width * scale).toBeLessThanOrEqual(slotWidth - 16);
+      expect(dims.height * scale).toBeLessThanOrEqual(slotHeight - 16);
+    });
+
+    test('1x5 piece scales down below 0.55 to sit fully inside slotWidth - 16', () => {
+      const piece1x5 = getPiece('line_1x5');
+      const dims = getPieceDimensions(piece1x5, cellSize, gap);
+      // 5 * 44 + 4 * 3 = 232
+      expect(dims.width).toBe(232);
+      expect(dims.height).toBe(44);
+
+      const expectedScale = (slotWidth - 16) / dims.width; // 74 / 232 ≈ 0.3189655
+      const scale = calculateRestScale(dims.width, dims.height, slotWidth, slotHeight);
+
+      expect(scale).toBeCloseTo(expectedScale, 6);
+      expect(scale).toBeLessThan(0.55);
+
+      // Verify piece sits fully inside slot with at least 8px margin on each side
+      const scaledWidth = dims.width * scale;
+      const scaledHeight = dims.height * scale;
+      expect(scaledWidth).toBeCloseTo(slotWidth - 16, 5);
+      expect(scaledWidth).toBeLessThanOrEqual(slotWidth - 16);
+      expect(scaledHeight).toBeLessThanOrEqual(slotHeight - 16);
+
+      const leftMargin = (slotWidth - scaledWidth) / 2;
+      expect(leftMargin).toBeCloseTo(8, 5);
+
+      // Verify with piece object directly
+      expect(calculateRestScale(piece1x5, slotWidth, slotHeight, cellSize, gap)).toBeCloseTo(
+        expectedScale,
+        6
+      );
+    });
+
+    test('5x1 piece scales down below 0.55 to sit fully inside slotHeight - 16', () => {
+      const piece5x1 = getPiece('line_5x1');
+      const dims = getPieceDimensions(piece5x1, cellSize, gap);
+      expect(dims.width).toBe(44);
+      expect(dims.height).toBe(232);
+
+      const expectedScale = (slotHeight - 16) / dims.height; // 80 / 232 ≈ 0.3448275
+      const scale = calculateRestScale(dims.width, dims.height, slotWidth, slotHeight);
+
+      expect(scale).toBeCloseTo(expectedScale, 6);
+      expect(scale).toBeLessThan(0.55);
+
+      // Verify piece sits fully inside slot with at least 8px margin on each side
+      const scaledWidth = dims.width * scale;
+      const scaledHeight = dims.height * scale;
+      expect(scaledWidth).toBeLessThanOrEqual(slotWidth - 16);
+      expect(scaledHeight).toBeCloseTo(slotHeight - 16, 5);
+      expect(scaledHeight).toBeLessThanOrEqual(slotHeight - 16);
+
+      const topMargin = (slotHeight - scaledHeight) / 2;
+      expect(topMargin).toBeCloseTo(8, 5);
+
+      // Verify with piece object directly
+      expect(calculateRestScale(piece5x1, slotWidth, slotHeight, cellSize, gap)).toBeCloseTo(
+        expectedScale,
+        6
+      );
+    });
+
+    test('3x3 piece scales down in tight slots and clamps to 0.55 in larger slots', () => {
+      const piece3x3 = getPiece('square_3x3');
+      const dims = getPieceDimensions(piece3x3, cellSize, gap);
+      // 3 * 44 + 2 * 3 = 138
+      expect(dims.width).toBe(138);
+      expect(dims.height).toBe(138);
+
+      // In narrow slot (90x96): (90 - 16) / 138 = 74 / 138 ≈ 0.5362 < 0.55
+      const tightScale = calculateRestScale(dims.width, dims.height, slotWidth, slotHeight);
+      expect(tightScale).toBeCloseTo(74 / 138, 5);
+      expect(tightScale).toBeLessThan(0.55);
+      expect(dims.width * tightScale).toBeCloseTo(slotWidth - 16, 5);
+
+      // In wide slot (120x96): (120 - 16) / 138 ≈ 0.7536, (96 - 16) / 138 ≈ 0.5797 -> clamped to 0.55
+      const wideScale = calculateRestScale(dims.width, dims.height, 120, slotHeight);
+      expect(wideScale).toBe(0.55);
+
+      // Passing piece object directly
+      expect(calculateRestScale(piece3x3, slotWidth, slotHeight, cellSize, gap)).toBeCloseTo(
+        74 / 138,
+        5
+      );
+    });
+
+    test('supports options object argument shape', () => {
+      const scale = calculateRestScale({
+        pieceWidth: 232,
+        pieceHeight: 44,
+        slotWidth: 90,
+        slotHeight: 96,
+      });
+      expect(scale).toBeCloseTo(74 / 232, 6);
+    });
+
+    test('handles invalid, missing, or zero dimensions with 0.55 default', () => {
+      expect(calculateRestScale(null, null, 90, 96)).toBe(0.55);
+      expect(calculateRestScale(0, 0, 90, 96)).toBe(0.55);
+      expect(calculateRestScale(undefined, 44, 90, 96)).toBe(0.55);
+      expect(calculateRestScale(44, 44, 0, 96)).toBe(0.55);
+      expect(calculateRestScale({ width: 0, height: 0, slotWidth: 90, slotHeight: 96 })).toBe(0.55);
+    });
+
+    test('exports getRestScale and restScale as identical aliases', () => {
+      expect(getRestScale).toBe(calculateRestScale);
+      expect(restScale).toBe(calculateRestScale);
     });
   });
 });

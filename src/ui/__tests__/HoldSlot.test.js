@@ -202,6 +202,93 @@ describe('HoldSlot component', () => {
     const slotWrapper = root.findByProps({ accessibilityLabel: 'Hold slot, contains piece' });
     expect(slotWrapper).toBeDefined();
   });
+
+  test('has idle elevation of 0 so no Android shadow appears', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <HoldSlot
+          piece={null}
+          slotWidth={80}
+          slotHeight={96}
+          cellSize={40}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={mockSharedOffset}
+          slotBoardOffsetY={mockSharedOffset}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          canHold={true}
+          theme={theme}
+        />
+      );
+    });
+
+    const root = tree.root;
+    const slotWrapper = root.findByProps({ accessibilityLabel: 'Hold slot, empty' });
+    expect(slotWrapper.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ elevation: 0 }),
+      ])
+    );
+  });
+
+  test('applies calculated restScale to 1x5 piece so it sits fully inside HoldSlot', () => {
+    const piece1x5 = {
+      id: 'line_1x5',
+      color: 1,
+      cells: [
+        [0, 0],
+        [0, 1],
+        [0, 2],
+        [0, 3],
+        [0, 4],
+      ],
+    };
+
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <HoldSlot
+          piece={piece1x5}
+          slotWidth={90}
+          slotHeight={96}
+          cellSize={44}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={mockSharedOffset}
+          slotBoardOffsetY={mockSharedOffset}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          canHold={true}
+          theme={theme}
+        />
+      );
+    });
+
+    const root = tree.root;
+    // pieceWidth = 5 * 44 + 4 * 3 = 232. expected restScale = (90 - 16) / 232 = 74 / 232 ≈ 0.3189655
+    const views = root.findAllByType(require('react-native').View);
+    const pieceWrapper = views.find(
+      (v) =>
+        Array.isArray(v.props.style) &&
+        v.props.style.some(
+          (s) =>
+            s &&
+            Array.isArray(s.transform) &&
+            s.transform.some((t) => typeof t.scale === 'number')
+        )
+    );
+    expect(pieceWrapper).toBeDefined();
+    const transformStyle = pieceWrapper.props.style.find(
+      (s) => s && Array.isArray(s.transform)
+    );
+    const scaleObj = transformStyle.transform.find((t) => typeof t.scale === 'number');
+    expect(scaleObj.scale).toBeCloseTo(74 / 232, 5);
+    expect(scaleObj.scale).toBeLessThan(0.55);
+  });
 });
 
 describe('Hold slot turn flow and state transitions', () => {
