@@ -418,7 +418,7 @@ export default function GameScreen({
                     {
                       backgroundColor: theme.surface,
                       borderColor:
-                        state.movesLeft <= 3 ? '#E05D5D' : theme.cellEmpty,
+                        state.movesLeft <= 3 ? theme.danger : theme.cellEmpty,
                     },
                   ]}
                   accessibilityRole="text"
@@ -429,7 +429,7 @@ export default function GameScreen({
                       styles.goalChipText,
                       {
                         color:
-                          state.movesLeft <= 3 ? '#E05D5D' : theme.inkMuted,
+                          state.movesLeft <= 3 ? theme.danger : theme.inkMuted,
                         fontFamily: 'Figtree_600SemiBold',
                       },
                     ]}

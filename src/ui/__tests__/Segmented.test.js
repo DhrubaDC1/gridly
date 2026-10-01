@@ -136,6 +136,44 @@ describe('Segmented component', () => {
     expect(selectedButton).toBeDefined();
     expect(selectedButton.props.accessibilityLabel).toBe('Dark');
 
+    const { StyleSheet } = require('react-native');
+    const selectedText = selectedButton.findByType('Text');
+    const textStyle = StyleSheet.flatten(selectedText.props.style);
+    expect(textStyle.color).toBe(darkTheme.onAccent);
+    expect(textStyle.color).toBe('#0E1218');
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('applies theme.onAccent for light theme selected label', () => {
+    const lightTheme = resolveTheme('light', 'light');
+    const { StyleSheet } = require('react-native');
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <Segmented
+          options={options}
+          value="light"
+          onChange={() => {}}
+          theme={lightTheme}
+        />
+      );
+    });
+
+    const root = tree.root;
+    const buttons = root.findAllByType('View').filter(
+      (node) => node.props?.accessibilityRole === 'button'
+    );
+    const selectedButton = buttons.find(
+      (p) => p.props.accessibilityState?.selected === true
+    );
+    const selectedText = selectedButton.findByType('Text');
+    const textStyle = StyleSheet.flatten(selectedText.props.style);
+    expect(textStyle.color).toBe(lightTheme.onAccent);
+    expect(textStyle.color).toBe('#FFFFFF');
+
     act(() => {
       tree.unmount();
     });

@@ -75,4 +75,55 @@ describe('HandHint component', () => {
     const texts = root.findAllByType('Text');
     expect(texts).toHaveLength(0);
   });
+
+  it('uses theme.onAccent for border and inner dot in dark and light modes', () => {
+    const { resolveTheme } = require('../theme');
+    const { StyleSheet } = require('react-native');
+    const darkTheme = resolveTheme('dark', 'dark');
+    const lightTheme = resolveTheme('light', 'light');
+
+    // Dark mode: onAccent is #0E1218
+    let darkTree;
+    act(() => {
+      darkTree = renderer.create(
+        <HandHint
+          visible={true}
+          startPos={{ x: 100, y: 300 }}
+          endPos={{ x: 250, y: 200 }}
+          theme={darkTheme}
+        />
+      );
+    });
+    const darkCircle = darkTree.root.findByProps({ testID: 'hand-hint' });
+    const darkCircleStyle = StyleSheet.flatten(darkCircle.props.style);
+    expect(darkCircleStyle.borderColor).toBe(darkTheme.onAccent);
+    expect(darkCircleStyle.borderColor).toBe('#0E1218');
+
+    const darkInnerDot = darkTree.root.findByProps({ testID: 'hand-hint-dot' });
+    const darkInnerDotStyle = StyleSheet.flatten(darkInnerDot.props.style);
+    expect(darkInnerDotStyle.backgroundColor).toBe(darkTheme.onAccent);
+    expect(darkInnerDotStyle.backgroundColor).toBe('#0E1218');
+
+    // Light mode: onAccent is #FFFFFF
+    let lightTree;
+    act(() => {
+      lightTree = renderer.create(
+        <HandHint
+          visible={true}
+          startPos={{ x: 100, y: 300 }}
+          endPos={{ x: 250, y: 200 }}
+          theme={lightTheme}
+        />
+      );
+    });
+    const lightCircle = lightTree.root.findByProps({ testID: 'hand-hint' });
+    const lightCircleStyle = StyleSheet.flatten(lightCircle.props.style);
+    expect(lightCircleStyle.borderColor).toBe(lightTheme.onAccent);
+    expect(lightCircleStyle.borderColor).toBe('#FFFFFF');
+
+    const lightInnerDot = lightTree.root.findByProps({ testID: 'hand-hint-dot' });
+    const lightInnerDotStyle = StyleSheet.flatten(lightInnerDot.props.style);
+    expect(lightInnerDotStyle.backgroundColor).toBe(lightTheme.onAccent);
+    expect(lightInnerDotStyle.backgroundColor).toBe('#FFFFFF');
+  });
 });

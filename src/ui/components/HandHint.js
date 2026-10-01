@@ -87,7 +87,7 @@ export default function HandHint({ startPos, endPos, visible, theme }) {
   }
 
   const circleBg = theme?.accent ? `${theme.accent}B3` : 'rgba(63, 95, 168, 0.7)';
-  const innerDotBg = '#FFFFFF';
+  const onAccentColor = theme?.onAccent || '#FFFFFF';
 
   return (
     <Animated.View
@@ -99,12 +99,15 @@ export default function HandHint({ startPos, endPos, visible, theme }) {
         styles.circle,
         {
           backgroundColor: circleBg,
-          borderColor: '#FFFFFF',
+          borderColor: onAccentColor,
         },
         animatedStyle,
       ]}
     >
-      <View style={[styles.innerDot, { backgroundColor: innerDotBg }]} />
+      <View
+        testID="hand-hint-dot"
+        style={[styles.innerDot, { backgroundColor: onAccentColor }]}
+      />
     </Animated.View>
   );
 }

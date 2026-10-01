@@ -385,5 +385,70 @@ describe('GameOver component', () => {
     expect(flattened.right).toBe(0);
     expect(flattened.backgroundColor).toBe('rgba(14,18,24,0.55)');
   });
+
+  test('primary buttons use theme.onAccent (dark in dark mode, white in light mode)', () => {
+    const { resolveTheme } = require('../theme');
+    const { StyleSheet } = require('react-native');
+    const darkTheme = resolveTheme('dark', 'dark');
+    const lightTheme = resolveTheme('light', 'light');
+
+    // Classic/Blitz: "Play again"
+    let darkTree;
+    act(() => {
+      darkTree = renderer.create(
+        <GameOver visible={true} theme={darkTheme} score={500} onPlayAgain={jest.fn()} onHome={jest.fn()} />
+      );
+    });
+    const playAgainDark = darkTree.root.findAllByType('Text').find((t) => t.props.children === 'Play again');
+    expect(StyleSheet.flatten(playAgainDark.props.style).color).toBe(darkTheme.onAccent);
+    expect(StyleSheet.flatten(playAgainDark.props.style).color).toBe('#0E1218');
+
+    let lightTree;
+    act(() => {
+      lightTree = renderer.create(
+        <GameOver visible={true} theme={lightTheme} score={500} onPlayAgain={jest.fn()} onHome={jest.fn()} />
+      );
+    });
+    const playAgainLight = lightTree.root.findAllByType('Text').find((t) => t.props.children === 'Play again');
+    expect(StyleSheet.flatten(playAgainLight.props.style).color).toBe(lightTheme.onAccent);
+    expect(StyleSheet.flatten(playAgainLight.props.style).color).toBe('#FFFFFF');
+
+    // Adventure complete: "Next level"
+    let advCompleteDark;
+    act(() => {
+      advCompleteDark = renderer.create(
+        <GameOver
+          visible={true}
+          mode="adventure"
+          overReason="levelComplete"
+          theme={darkTheme}
+          score={1500}
+          stars={2}
+          onNextLevel={jest.fn()}
+        />
+      );
+    });
+    const nextLevelDark = advCompleteDark.root.findAllByType('Text').find((t) => t.props.children === 'Next level');
+    expect(StyleSheet.flatten(nextLevelDark.props.style).color).toBe(darkTheme.onAccent);
+    expect(StyleSheet.flatten(nextLevelDark.props.style).color).toBe('#0E1218');
+
+    // Adventure failed: "Try again"
+    let advFailDark;
+    act(() => {
+      advFailDark = renderer.create(
+        <GameOver
+          visible={true}
+          mode="adventure"
+          overReason="outOfMoves"
+          theme={darkTheme}
+          score={500}
+          onPlayAgain={jest.fn()}
+        />
+      );
+    });
+    const tryAgainDark = advFailDark.root.findAllByType('Text').find((t) => t.props.children === 'Try again');
+    expect(StyleSheet.flatten(tryAgainDark.props.style).color).toBe(darkTheme.onAccent);
+    expect(StyleSheet.flatten(tryAgainDark.props.style).color).toBe('#0E1218');
+  });
 });
 

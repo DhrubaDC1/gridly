@@ -220,7 +220,9 @@ export default function GameOver({
               ]}
               onPress={onNextLevel || handlePlayAgain}
             >
-              <Text style={styles.primaryButtonText}>Next level</Text>
+              <Text style={[styles.primaryButtonText, { color: theme.onAccent }]}>
+                Next level
+              </Text>
             </Pressable>
 
             <Pressable
@@ -292,7 +294,9 @@ export default function GameOver({
               ]}
               onPress={handlePlayAgain}
             >
-              <Text style={styles.primaryButtonText}>Try again</Text>
+              <Text style={[styles.primaryButtonText, { color: theme.onAccent }]}>
+                Try again
+              </Text>
             </Pressable>
 
             <Pressable
@@ -363,7 +367,9 @@ export default function GameOver({
               ]}
               onPress={handlePlayAgain}
             >
-              <Text style={styles.primaryButtonText}>Play again</Text>
+              <Text style={[styles.primaryButtonText, { color: theme.onAccent }]}>
+                Play again
+              </Text>
             </Pressable>
 
             <Pressable
@@ -447,7 +453,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: 'Figtree_600SemiBold',
     fontSize: 16,
-    color: '#FFFFFF',
   },
   secondaryButton: {
     width: '100%',

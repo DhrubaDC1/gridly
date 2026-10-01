@@ -40,8 +40,17 @@ export default function HomeScreen() {
           ]}
           onPress={() => router.push('/classic')}
         >
-          <Text style={styles.primaryButtonText}>Play Classic</Text>
-          <Text style={styles.primaryButtonSub}>Endless relaxing puzzle</Text>
+          <Text style={[styles.primaryButtonText, { color: theme.onAccent }]}>
+            Play Classic
+          </Text>
+          <Text
+            style={[
+              styles.primaryButtonSub,
+              { color: theme.onAccent, opacity: 0.8 },
+            ]}
+          >
+            Endless relaxing puzzle
+          </Text>
         </Pressable>
 
         <Pressable
@@ -211,12 +220,10 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: 'Figtree_600SemiBold',
     fontSize: 18,
-    color: '#FFFFFF',
   },
   primaryButtonSub: {
     fontFamily: 'Figtree_400Regular',
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 2,
   },
   secondaryButton: {

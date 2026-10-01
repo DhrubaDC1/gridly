@@ -1,3 +1,20 @@
+let mockControllerOverride = null;
+jest.mock('../../game/useGameController', () => {
+  const actual = jest.requireActual('../../game/useGameController');
+  const mockFn = (args) => {
+    if (mockControllerOverride) {
+      return mockControllerOverride;
+    }
+    return (actual.useGameController || actual.default)(args);
+  };
+  return {
+    __esModule: true,
+    ...actual,
+    default: mockFn,
+    useGameController: mockFn,
+  };
+});
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 44, bottom: 34, left: 0, right: 0 }),
 }));
@@ -181,6 +198,56 @@ describe('GameScreen component', () => {
     expect(StyleSheet.flatten(bottomRow.props.style).opacity).toBe(1);
     expect(StyleSheet.flatten(tray.props.style).opacity).toBe(1);
 
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('moves left goal chip uses theme.danger when movesLeft <= 3', () => {
+    mockControllerOverride = {
+      state: {
+        mode: 'adventure',
+        score: 100,
+        movesLeft: 2,
+        goals: [{ type: 'lines', count: 3, completed: false }],
+        tray: [null, null, null],
+        hold: null,
+        holdUsed: false,
+        over: false,
+        board: Array(64).fill(null),
+      },
+      clearing: null,
+      onClearingComplete: jest.fn(),
+      place: jest.fn(),
+      hold: jest.fn(),
+      restart: jest.fn(),
+      subscribe: jest.fn(() => () => {}),
+      isPaused: false,
+      pause: jest.fn(),
+      resume: jest.fn(),
+    };
+
+    let tree;
+    act(() => {
+      tree = renderer.create(<GameScreen mode="adventure" levelId={12} />);
+    });
+
+    const root = tree.root;
+    const { StyleSheet } = require('react-native');
+    const chip = root.findByProps({ accessibilityLabel: '2 moves left' });
+    expect(chip).toBeDefined();
+
+    const chipStyle = StyleSheet.flatten(chip.props.style);
+    const theme = require('../theme').resolveTheme('light');
+    expect(chipStyle.borderColor).toBe(theme.danger);
+    expect(chipStyle.borderColor).toBe('#C8372D');
+
+    const text = chip.findByType('Text');
+    const textStyle = StyleSheet.flatten(text.props.style);
+    expect(textStyle.color).toBe(theme.danger);
+    expect(textStyle.color).toBe('#C8372D');
+
+    mockControllerOverride = null;
     act(() => {
       tree.unmount();
     });

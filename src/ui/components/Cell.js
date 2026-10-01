@@ -169,7 +169,7 @@ export default function Cell({
   // Border parameters for lock cells
   const lockBorderWidth = Math.max(2.5, size * 0.075);
   const lockInset = lockBorderWidth / 2 + 1;
-  const lockColor = theme?.isDark ? '#E7EAF0' : '#1D2433';
+  const lockColor = theme?.ink ?? (theme?.isDark ? '#ECEFF5' : '#1B1F2A');
 
   const innerInset = lockInset + lockBorderWidth + 2.5;
   const innerWidth = size - 2 * innerInset;

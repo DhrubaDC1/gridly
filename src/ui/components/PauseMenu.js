@@ -50,7 +50,9 @@ export default function PauseMenu({
             ]}
             onPress={onResume}
           >
-            <Text style={styles.primaryButtonText}>Resume</Text>
+            <Text style={[styles.primaryButtonText, { color: theme.onAccent }]}>
+              Resume
+            </Text>
           </Pressable>
 
           <Pressable
@@ -127,7 +129,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: 'Figtree_600SemiBold',
     fontSize: 16,
-    color: '#FFFFFF',
   },
   secondaryButtonText: {
     fontFamily: 'Figtree_600SemiBold',

@@ -86,7 +86,7 @@ export default function Segmented({
                 isSelected
                   ? [
                       styles.selectedLabel,
-                      { color: theme.isDark ? theme.bg : '#FFFFFF' },
+                      { color: theme.onAccent },
                     ]
                   : [
                       styles.unselectedLabel,
