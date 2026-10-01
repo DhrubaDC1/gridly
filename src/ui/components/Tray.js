@@ -15,24 +15,50 @@ const TRAY_GAP = 10;
  * @param {Object} props
  * @param {Array<{ color: number, cells: Array<[number, number]> } | null>} props.pieces
  * @param {number} props.boardSize
+ * @param {number} [props.trayWidth]
+ * @param {number} [props.slotWidth]
+ * @param {number} [props.slotHeight]
+ * @param {number} [props.gap]
  * @param {Array<any>} props.board
  * @param {{ x: number, y: number, width: number, height: number } | null} props.boardLayout
+ * @param {Array<import('react-native-reanimated').SharedValue<number>>} [props.slotOffsetXs]
+ * @param {import('react-native-reanimated').SharedValue<number>} [props.slotOffsetY]
+ * @param {Array<import('react-native-reanimated').SharedValue<number>>} [props.slotHoldOffsetXs]
+ * @param {import('react-native-reanimated').SharedValue<number>} [props.slotHoldOffsetY]
+ * @param {number} [props.holdWidth]
+ * @param {number} [props.holdHeight]
+ * @param {boolean} [props.canHold=true]
+ * @param {import('react-native-reanimated').SharedValue<boolean>} [props.isHoldHovered]
  * @param {Object} props.ghost
  * @param {import('react-native-reanimated').SharedValue<number>} props.ghost.ghostX
  * @param {import('react-native-reanimated').SharedValue<number>} props.ghost.ghostY
  * @param {import('react-native-reanimated').SharedValue<number>} props.ghost.ghostOpacity
  * @param {(piece: any) => void} props.ghost.setActiveGhostPiece
  * @param {(slotIndex: number, piece: any, row: number, col: number) => void} props.onPlace
+ * @param {(slotIndex: number, piece: any) => void} [props.onHold]
  * @param {(layout: { x: number, y: number, width: number, height: number }) => void} [props.onTrayLayout]
  * @param {any} [props.style]
  */
 export default function Tray({
   pieces,
   boardSize,
+  trayWidth: propTrayWidth,
+  slotWidth: propSlotWidth,
+  slotHeight: propSlotHeight,
+  gap: propGap,
   board,
   boardLayout,
+  slotOffsetXs: propSlotOffsetXs,
+  slotOffsetY: propSlotOffsetY,
+  slotHoldOffsetXs,
+  slotHoldOffsetY,
+  holdWidth,
+  holdHeight,
+  canHold = true,
+  isHoldHovered,
   ghost,
   onPlace,
+  onHold,
   onTrayLayout,
   style,
 }) {
@@ -42,38 +68,46 @@ export default function Tray({
   const boardRef = useRef(board);
   boardRef.current = board;
 
-  const slotWidth = (boardSize - 2 * TRAY_GAP) / 3;
-  const slotHeight = TRAY_SLOT_HEIGHT;
+  const gap = propGap ?? TRAY_GAP;
+  const slotWidth = propSlotWidth ?? (boardSize - 2 * gap) / 3;
+  const slotHeight = propSlotHeight ?? TRAY_SLOT_HEIGHT;
+  const trayWidth = propTrayWidth ?? (3 * slotWidth + 2 * gap);
 
   const trayLayoutRef = useRef(null);
 
-  // Shared values for slot-to-board offsets
-  const slot0OffsetX = useSharedValue(0);
-  const slot1OffsetX = useSharedValue(slotWidth + TRAY_GAP);
-  const slot2OffsetX = useSharedValue(2 * (slotWidth + TRAY_GAP));
-  const slotOffsetY = useSharedValue(boardSize + 24);
+  // Internal fallback shared values for slot-to-board offsets
+  const internalSlot0OffsetX = useSharedValue(0);
+  const internalSlot1OffsetX = useSharedValue(slotWidth + gap);
+  const internalSlot2OffsetX = useSharedValue(2 * (slotWidth + gap));
+  const internalSlotOffsetY = useSharedValue(boardSize + 24);
 
-  const slotOffsetXs = [slot0OffsetX, slot1OffsetX, slot2OffsetX];
+  const slotOffsetXs =
+    propSlotOffsetXs ?? [
+      internalSlot0OffsetX,
+      internalSlot1OffsetX,
+      internalSlot2OffsetX,
+    ];
+  const slotOffsetY = propSlotOffsetY ?? internalSlotOffsetY;
 
   useEffect(() => {
-    if (boardLayout && trayLayoutRef.current) {
+    if (!propSlotOffsetXs && boardLayout && trayLayoutRef.current) {
       const bLayout = boardLayout;
       const tLayout = trayLayoutRef.current;
       slotOffsetY.value = tLayout.y - bLayout.y;
       for (let i = 0; i < 3; i++) {
-        const slotX = tLayout.x + i * (slotWidth + TRAY_GAP);
+        const slotX = tLayout.x + i * (slotWidth + gap);
         slotOffsetXs[i].value = slotX - bLayout.x;
       }
     }
-  }, [boardLayout, slotWidth]);
+  }, [boardLayout, slotWidth, gap, propSlotOffsetXs]);
 
   const handleLayout = (e) => {
     const layout = e.nativeEvent.layout;
     trayLayoutRef.current = layout;
-    if (boardLayout) {
+    if (!propSlotOffsetXs && boardLayout) {
       slotOffsetY.value = layout.y - boardLayout.y;
       for (let i = 0; i < 3; i++) {
-        const slotX = layout.x + i * (slotWidth + TRAY_GAP);
+        const slotX = layout.x + i * (slotWidth + gap);
         slotOffsetXs[i].value = slotX - boardLayout.x;
       }
     }
@@ -87,7 +121,7 @@ export default function Tray({
       onLayout={handleLayout}
       style={[
         styles.trayContainer,
-        { width: boardSize },
+        { width: trayWidth, gap },
         style,
       ]}
     >
@@ -104,8 +138,15 @@ export default function Tray({
           boardRef={boardRef}
           slotBoardOffsetX={slotOffsetXs[index]}
           slotBoardOffsetY={slotOffsetY}
+          slotHoldOffsetX={slotHoldOffsetXs?.[index]}
+          slotHoldOffsetY={slotHoldOffsetY}
+          holdWidth={holdWidth}
+          holdHeight={holdHeight}
+          canHold={canHold}
+          isHoldHovered={isHoldHovered}
           ghost={ghost}
           onPlace={onPlace}
+          onHold={onHold}
           reduceMotion={reduceMotion}
           theme={theme}
         />
@@ -119,8 +160,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: TRAY_GAP,
-    marginTop: 8,
     overflow: 'visible',
   },
 });

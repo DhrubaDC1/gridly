@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,9 +13,11 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { useTheme } from '../src/ui/theme';
+import useReduceMotion from '../src/ui/useReduceMotion';
 import Board from '../src/ui/components/Board';
 import Piece from '../src/ui/components/Piece';
 import Tray from '../src/ui/components/Tray';
+import HoldSlot from '../src/ui/components/HoldSlot';
 import { getDefaultBoardSize, getBoardMetrics } from '../src/ui/boardLayout';
 import { placePiece } from '../src/engine/board';
 
@@ -69,19 +71,91 @@ export default function ClassicScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
+  const reduceMotion = useReduceMotion();
 
   const [board, setBoard] = useState(INITIAL_TEST_BOARD);
   const [trayPieces, setTrayPieces] = useState(INITIAL_TEST_PIECES);
+  const [heldPiece, setHeldPiece] = useState(null);
+  const [canHold, setCanHold] = useState(true);
   const [ghostPiece, setGhostPiece] = useState(null);
   const [boardLayout, setBoardLayout] = useState(null);
+  const [bottomRowLayout, setBottomRowLayout] = useState(null);
+
+  const boardRef = useRef(board);
+  boardRef.current = board;
 
   const boardSize = getDefaultBoardSize(screenWidth);
   const metrics = getBoardMetrics(boardSize);
+
+  const TRAY_GAP = 8;
+  const slotWidth = Math.floor((boardSize - 30) / 4);
+  const slotHeight = 96;
+  const trayWidth = 3 * slotWidth + 2 * TRAY_GAP;
+  const holdWidth = slotWidth;
 
   // Shared values for ghost preview on board
   const ghostX = useSharedValue(0);
   const ghostY = useSharedValue(0);
   const ghostOpacity = useSharedValue(0);
+
+  // Shared values for hold and tray offsets
+  const holdBoardOffsetX = useSharedValue(0);
+  const holdBoardOffsetY = useSharedValue(0);
+
+  const slot0BoardOffsetX = useSharedValue(0);
+  const slot1BoardOffsetX = useSharedValue(0);
+  const slot2BoardOffsetX = useSharedValue(0);
+  const slotBoardOffsetY = useSharedValue(0);
+
+  const slot0HoldOffsetX = useSharedValue(0);
+  const slot1HoldOffsetX = useSharedValue(0);
+  const slot2HoldOffsetX = useSharedValue(0);
+  const slotHoldOffsetY = useSharedValue(0);
+
+  const isHoldHovered = useSharedValue(false);
+
+  const slotBoardOffsetXs = [
+    slot0BoardOffsetX,
+    slot1BoardOffsetX,
+    slot2BoardOffsetX,
+  ];
+  const slotHoldOffsetXs = [
+    slot0HoldOffsetX,
+    slot1HoldOffsetX,
+    slot2HoldOffsetX,
+  ];
+
+  useEffect(() => {
+    if (boardLayout && bottomRowLayout) {
+      const rowYOffset = bottomRowLayout.y - boardLayout.y;
+      const rowXOffset = bottomRowLayout.x - boardLayout.x;
+
+      holdBoardOffsetX.value = rowXOffset;
+      holdBoardOffsetY.value = rowYOffset;
+
+      slotBoardOffsetY.value = rowYOffset;
+      slotHoldOffsetY.value = 0;
+
+      const trayX = boardSize - trayWidth;
+      for (let i = 0; i < 3; i++) {
+        const slotXInRow = trayX + i * (slotWidth + TRAY_GAP);
+        slotBoardOffsetXs[i].value = rowXOffset + slotXInRow;
+        slotHoldOffsetXs[i].value = -slotXInRow;
+      }
+    }
+  }, [
+    boardLayout,
+    bottomRowLayout,
+    boardSize,
+    trayWidth,
+    slotWidth,
+    slotBoardOffsetXs,
+    slotHoldOffsetXs,
+    holdBoardOffsetX,
+    holdBoardOffsetY,
+    slotBoardOffsetY,
+    slotHoldOffsetY,
+  ]);
 
   const ghostAnimatedStyle = useAnimatedStyle(() => ({
     opacity: ghostOpacity.value,
@@ -103,6 +177,29 @@ export default function ClassicScreen() {
       }
       return next;
     });
+    setCanHold(true);
+  };
+
+  const handlePlaceHeldPiece = (piece, row, col) => {
+    setBoard((prev) =>
+      placePiece(prev, piece, row, col, piece.color, 'normal')
+    );
+    setHeldPiece(null);
+    setCanHold(true);
+  };
+
+  const handleHoldFromTray = (slotIndex, piece) => {
+    const previousHold = heldPiece;
+    setHeldPiece(piece);
+    setTrayPieces((prev) => {
+      const next = [...prev];
+      next[slotIndex] = previousHold;
+      if (next.every((p) => p === null)) {
+        return INITIAL_TEST_PIECES;
+      }
+      return next;
+    });
+    setCanHold(false);
   };
 
   return (
@@ -161,20 +258,60 @@ export default function ClassicScreen() {
         </Animated.View>
       </View>
 
-      {/* Tray of 3 pieces */}
-      <Tray
-        pieces={trayPieces}
-        boardSize={boardSize}
-        board={board}
-        boardLayout={boardLayout}
-        ghost={{
-          ghostX,
-          ghostY,
-          ghostOpacity,
-          setActiveGhostPiece: setGhostPiece,
-        }}
-        onPlace={handlePlacePiece}
-      />
+      {/* Bottom Area: Hold Slot to the left of Tray */}
+      <View
+        onLayout={(e) => setBottomRowLayout(e.nativeEvent.layout)}
+        style={[styles.bottomRow, { width: boardSize }]}
+      >
+        <HoldSlot
+          piece={heldPiece}
+          slotWidth={holdWidth}
+          slotHeight={slotHeight}
+          cellSize={metrics.cellSize}
+          gap={metrics.gap}
+          padding={metrics.padding}
+          boardRef={boardRef}
+          slotBoardOffsetX={holdBoardOffsetX}
+          slotBoardOffsetY={holdBoardOffsetY}
+          ghost={{
+            ghostX,
+            ghostY,
+            ghostOpacity,
+            setActiveGhostPiece: setGhostPiece,
+          }}
+          onPlace={handlePlaceHeldPiece}
+          canHold={canHold}
+          isHovered={isHoldHovered}
+          reduceMotion={reduceMotion}
+          theme={theme}
+        />
+        <Tray
+          pieces={trayPieces}
+          boardSize={boardSize}
+          trayWidth={trayWidth}
+          slotWidth={slotWidth}
+          slotHeight={slotHeight}
+          gap={TRAY_GAP}
+          board={board}
+          boardLayout={boardLayout}
+          slotOffsetXs={slotBoardOffsetXs}
+          slotOffsetY={slotBoardOffsetY}
+          slotHoldOffsetXs={slotHoldOffsetXs}
+          slotHoldOffsetY={slotHoldOffsetY}
+          holdWidth={holdWidth}
+          holdHeight={slotHeight}
+          canHold={canHold}
+          isHoldHovered={isHoldHovered}
+          ghost={{
+            ghostX,
+            ghostY,
+            ghostOpacity,
+            setActiveGhostPiece: setGhostPiece,
+          }}
+          onPlace={handlePlacePiece}
+          onHold={handleHoldFromTray}
+        />
+      </View>
     </View>
   );
 }
@@ -220,5 +357,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 8,
+    overflow: 'visible',
+    position: 'relative',
+    zIndex: 100,
   },
 });
