@@ -2,7 +2,11 @@ import React from 'react';
 import { Canvas } from '@shopify/react-native-skia';
 import { useTheme } from '../theme';
 import { useSettings } from '../../store/useSettings';
-import { DEFAULT_CELL_GAP, calculateCellRadius } from '../boardLayout';
+import {
+  DEFAULT_CELL_GAP,
+  calculateCellRadius,
+  getPieceDimensions,
+} from '../boardLayout';
 import Cell from './Cell';
 
 /**
@@ -14,6 +18,7 @@ import Cell from './Cell';
  * @param {number} props.cellSize
  * @param {number} [props.gap=3]
  * @param {boolean} [props.colorblind]
+ * @param {boolean} [props.ghost=false]
  * @param {any} [props.style]
  */
 export default function Piece({
@@ -22,8 +27,10 @@ export default function Piece({
   cellSize,
   gap = DEFAULT_CELL_GAP,
   colorblind: colorblindProp,
+  ghost = false,
   style,
 }) {
+
   const theme = useTheme();
   const settingsColorblind = useSettings((state) => state.colorblind);
   const isColorblind =
@@ -33,24 +40,11 @@ export default function Piece({
     return null;
   }
 
-  let minR = Infinity;
-  let maxR = -Infinity;
-  let minC = Infinity;
-  let maxC = -Infinity;
-
-  for (const cell of cells) {
-    const r = Array.isArray(cell) ? cell[0] : cell.r;
-    const c = Array.isArray(cell) ? cell[1] : cell.c;
-    if (r < minR) minR = r;
-    if (r > maxR) maxR = r;
-    if (c < minC) minC = c;
-    if (c > maxC) maxC = c;
-  }
-
-  const numRows = maxR - minR + 1;
-  const numCols = maxC - minC + 1;
-  const width = numCols * cellSize + (numCols - 1) * gap;
-  const height = numRows * cellSize + (numRows - 1) * gap;
+  const { width, height, minR, minC } = getPieceDimensions(
+    { cells },
+    cellSize,
+    gap
+  );
   const cellRadius = calculateCellRadius(cellSize);
 
   return (
@@ -74,6 +68,7 @@ export default function Piece({
             kind={cell.kind || 'normal'}
             hp={cell.hp || 1}
             colorblind={isColorblind}
+            ghost={ghost}
             theme={theme}
           />
         );
@@ -81,3 +76,4 @@ export default function Piece({
     </Canvas>
   );
 }
+

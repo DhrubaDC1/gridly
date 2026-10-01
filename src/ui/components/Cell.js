@@ -103,6 +103,7 @@ function ColorblindGlyph({ glyph, cx, cy, size }) {
  * @param {'normal' | 'gem' | 'lock'} [props.kind='normal']
  * @param {number} [props.hp=1]
  * @param {boolean} [props.colorblind=false]
+ * @param {boolean} [props.ghost=false]
  * @param {Object} props.theme
  */
 export default function Cell({
@@ -114,6 +115,7 @@ export default function Cell({
   kind = 'normal',
   hp = 1,
   colorblind = false,
+  ghost = false,
   theme,
 }) {
   const colorIndex = typeof color === 'number' ? color : 0;
@@ -121,6 +123,32 @@ export default function Cell({
     typeof color === 'number'
       ? theme?.blocks?.[color] ?? theme?.blockColors?.[color] ?? '#5B7DB1'
       : color || '#5B7DB1';
+
+  if (ghost) {
+    return (
+      <Group>
+        <RoundedRect
+          x={x}
+          y={y}
+          width={size}
+          height={size}
+          r={cellRadius}
+          color={blockColor}
+          style="stroke"
+          strokeWidth={2}
+        />
+        <RoundedRect
+          x={x}
+          y={y}
+          width={size}
+          height={size}
+          r={cellRadius}
+          color={blockColor}
+          opacity={0.25}
+        />
+      </Group>
+    );
+  }
 
   const darkerColor = adjustBrightness(blockColor, -25);
   const highlightColor = 'rgba(255, 255, 255, 0.35)';
@@ -152,6 +180,7 @@ export default function Cell({
   return (
     <Group>
       {/* 2px darker bottom edge base */}
+
       <RoundedRect
         x={x}
         y={y}

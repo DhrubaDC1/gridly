@@ -16,6 +16,7 @@ import {
   getCellRowCol,
   getBoardMetrics,
   getCellAtPosition,
+  getPieceDimensions,
 } from '../boardLayout';
 
 describe('boardLayout', () => {
@@ -131,4 +132,36 @@ describe('boardLayout', () => {
     expect(getCellAtPosition(-10, 50, cellSize, padding, gap)).toBeNull();
     expect(getCellAtPosition(500, 50, cellSize, padding, gap)).toBeNull();
   });
+
+  test('getPieceDimensions calculates bounding box and pixel dimensions correctly', () => {
+    const cellSize = 40;
+    const gap = 3;
+
+    // 1x3 horizontal piece
+    const p1x3 = { cells: [[0, 0], [0, 1], [0, 2]] };
+    const dim1x3 = getPieceDimensions(p1x3, cellSize, gap);
+    expect(dim1x3.numRows).toBe(1);
+    expect(dim1x3.numCols).toBe(3);
+    expect(dim1x3.width).toBe(3 * 40 + 2 * 3);
+    expect(dim1x3.height).toBe(40);
+
+    // 2x2 square
+    const p2x2 = { cells: [[0, 0], [0, 1], [1, 0], [1, 1]] };
+    const dim2x2 = getPieceDimensions(p2x2, cellSize, gap);
+    expect(dim2x2.numRows).toBe(2);
+    expect(dim2x2.numCols).toBe(2);
+    expect(dim2x2.width).toBe(2 * 40 + 3);
+    expect(dim2x2.height).toBe(2 * 40 + 3);
+
+    // Empty/null
+    expect(getPieceDimensions(null, cellSize)).toEqual({
+      numRows: 0,
+      numCols: 0,
+      width: 0,
+      height: 0,
+      minR: 0,
+      minC: 0,
+    });
+  });
 });
+
