@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createStats } from '../engine/stats';
 import { calculateAdventureProgress } from '../game/adventureProgress';
+import levelsData from '../../assets/levels/levels.json';
 
 /**
  * @typedef {Object} ModeStats
@@ -98,6 +99,15 @@ export const useProgress = create(
             stars,
             score,
           }),
+          updatedAt: new Date().toISOString(),
+        })),
+
+      unlockAllLevels: (totalLevels = levelsData.length) =>
+        set((state) => ({
+          adventure: {
+            ...(state.adventure || {}),
+            unlocked: typeof totalLevels === 'number' ? totalLevels : levelsData.length,
+          },
           updatedAt: new Date().toISOString(),
         })),
 

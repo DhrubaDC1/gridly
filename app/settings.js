@@ -1,8 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, View, Switch, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Switch, ScrollView, Pressable } from 'react-native';
 import { useTheme } from '../src/ui/theme';
 import { useSettings } from '../src/store/useSettings';
+import { useProgress } from '../src/store/useProgress';
 import Segmented from '../src/ui/components/Segmented';
+import levelsData from '../assets/levels/levels.json';
 
 const THEME_OPTIONS = [
   { value: 'system', label: 'System' },
@@ -30,6 +32,7 @@ export default function SettingsScreen() {
     setColorblind,
     setReduceMotion,
   } = useSettings();
+  const unlockAllLevels = useProgress((state) => state.unlockAllLevels);
 
   return (
     <ScrollView
@@ -110,6 +113,25 @@ export default function SettingsScreen() {
             theme={theme}
           />
         </View>
+
+        {typeof __DEV__ !== 'undefined' && __DEV__ ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Unlock all levels"
+            onPress={() => unlockAllLevels(levelsData.length)}
+            style={({ pressed }) => [
+              styles.devRow,
+              {
+                backgroundColor: theme.well,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.label, { color: theme.ink }]}>
+              Unlock all levels
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -154,6 +176,14 @@ const styles = StyleSheet.create({
   switchTarget: {
     minWidth: 44,
     minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  devRow: {
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },

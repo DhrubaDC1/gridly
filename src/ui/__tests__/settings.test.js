@@ -3,7 +3,9 @@ import { Switch } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import SettingsScreen from '../../../app/settings';
 import { useSettings } from '../../store/useSettings';
+import { useProgress } from '../../store/useProgress';
 import Segmented from '../components/Segmented';
+import levelsData from '../../../assets/levels/levels.json';
 
 function triggerPress(node) {
   if (typeof node.props.onPress === 'function') {
@@ -19,6 +21,7 @@ describe('SettingsScreen', () => {
   beforeEach(() => {
     act(() => {
       useSettings.getState().resetSettings();
+      useProgress.getState().resetProgress();
     });
   });
 
@@ -169,5 +172,59 @@ describe('SettingsScreen', () => {
     act(() => {
       tree.unmount();
     });
+  });
+
+  test('renders "Unlock all levels" row when __DEV__ is true and tapping it unlocks all levels', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(<SettingsScreen />);
+    });
+
+    const root = tree.root;
+    const texts = root.findAllByType('Text').map((t) => t.props.children);
+    expect(texts).toContain('Unlock all levels');
+
+    expect(useProgress.getState().adventure.unlocked).toBe(1);
+
+    const unlockBtn = root.findByProps({
+      accessibilityLabel: 'Unlock all levels',
+    });
+    expect(unlockBtn).toBeDefined();
+
+    act(() => {
+      unlockBtn.props.onPress();
+    });
+
+    expect(useProgress.getState().adventure.unlocked).toBe(levelsData.length);
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('does not render "Unlock all levels" row when __DEV__ is false', () => {
+    const originalDev = global.__DEV__;
+    try {
+      global.__DEV__ = false;
+      let tree;
+      act(() => {
+        tree = renderer.create(<SettingsScreen />);
+      });
+
+      const root = tree.root;
+      const texts = root.findAllByType('Text').map((t) => t.props.children);
+      expect(texts).not.toContain('Unlock all levels');
+
+      const unlockButtons = root.findAllByProps({
+        accessibilityLabel: 'Unlock all levels',
+      });
+      expect(unlockButtons.length).toBe(0);
+
+      act(() => {
+        tree.unmount();
+      });
+    } finally {
+      global.__DEV__ = originalDev;
+    }
   });
 });
