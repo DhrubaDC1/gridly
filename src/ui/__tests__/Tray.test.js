@@ -76,6 +76,7 @@ jest.mock('@shopify/react-native-skia', () => {
 });
 
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import Tray from '../components/Tray';
 import TraySlot from '../components/TraySlot';
@@ -439,5 +440,76 @@ describe('Tray and TraySlot components', () => {
     expect(scale5x1).toBeLessThan(0.55);
     // Scaled height fits inside slotHeight - 16
     expect(232 * scale5x1).toBeLessThanOrEqual(96 - 16);
+  });
+
+  test('TraySlot renders socket with theme.surfaceSunken, radius 16, and theme-dependent opacity', () => {
+    // Light mode test
+    let lightTree;
+    act(() => {
+      lightTree = renderer.create(
+        <TraySlot
+          slotIndex={0}
+          piece={null}
+          slotWidth={80}
+          slotHeight={96}
+          cellSize={35}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={{ value: 0 }}
+          slotBoardOffsetY={{ value: 0 }}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          theme={theme}
+        />
+      );
+    });
+
+    const lightViews = lightTree.root.findAllByType(require('react-native').View);
+    const lightBg = lightViews.find(
+      (v) =>
+        Array.isArray(v.props.style) &&
+        v.props.style.some((s) => s && s.backgroundColor === theme.surfaceSunken)
+    );
+    expect(lightBg).toBeDefined();
+    const flatLight = StyleSheet.flatten(lightBg.props.style);
+    expect(flatLight.backgroundColor).toBe(theme.surfaceSunken);
+    expect(flatLight.opacity).toBe(0.6);
+    expect(flatLight.borderRadius).toBe(16);
+
+    // Dark mode test
+    const darkTheme = resolveTheme('dark');
+    let darkTree;
+    act(() => {
+      darkTree = renderer.create(
+        <TraySlot
+          slotIndex={0}
+          piece={null}
+          slotWidth={80}
+          slotHeight={96}
+          cellSize={35}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={{ value: 0 }}
+          slotBoardOffsetY={{ value: 0 }}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          theme={darkTheme}
+        />
+      );
+    });
+
+    const darkViews = darkTree.root.findAllByType(require('react-native').View);
+    const darkBg = darkViews.find(
+      (v) =>
+        Array.isArray(v.props.style) &&
+        v.props.style.some((s) => s && s.backgroundColor === darkTheme.surfaceSunken)
+    );
+    expect(darkBg).toBeDefined();
+    const flatDark = StyleSheet.flatten(darkBg.props.style);
+    expect(flatDark.backgroundColor).toBe(darkTheme.surfaceSunken);
+    expect(flatDark.opacity).toBe(1.0);
+    expect(flatDark.borderRadius).toBe(16);
   });
 });

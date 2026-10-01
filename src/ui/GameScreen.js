@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginVertical: 8,
     overflow: 'visible',
     position: 'relative',

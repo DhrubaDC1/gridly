@@ -8,6 +8,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import Piece from './Piece';
+import { useTheme } from '../theme';
 import { getPieceDimensions, calculateRestScale } from '../boardLayout';
 import { canPlace } from '../../engine/board';
 
@@ -65,6 +66,9 @@ function TraySlot({
   reduceMotion,
   theme,
 }) {
+  const hookTheme = useTheme();
+  const activeTheme = theme || hookTheme;
+
   const { width: pieceWidth, height: pieceHeight } = getPieceDimensions(
     piece,
     cellSize,
@@ -453,7 +457,13 @@ function TraySlot({
         ]}
       >
         <View
-          style={[styles.slotBackground, { backgroundColor: theme.surface }]}
+          style={[
+            styles.slotBackground,
+            {
+              backgroundColor: activeTheme.surfaceSunken,
+              opacity: activeTheme.isDark ? 1.0 : 0.6,
+            },
+          ]}
         />
         {piece && (
           <Animated.View
@@ -482,6 +492,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     overflow: 'visible',
+    borderRadius: 16,
   },
   slotBackground: {
     position: 'absolute',
@@ -489,7 +500,7 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 14,
+    borderRadius: 16,
   },
   pieceWrapper: {
     alignItems: 'center',

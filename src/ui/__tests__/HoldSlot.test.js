@@ -50,6 +50,7 @@ jest.mock('@shopify/react-native-skia', () => {
 });
 
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import HoldSlot from '../components/HoldSlot';
 import { resolveTheme } from '../theme';
@@ -104,7 +105,7 @@ describe('HoldSlot component', () => {
     );
   });
 
-  test('uses theme well color for slot background', () => {
+  test('uses theme surfaceSunken socket background and line dashed border', () => {
     let tree;
     act(() => {
       tree = renderer.create(
@@ -131,9 +132,26 @@ describe('HoldSlot component', () => {
     const bgView = views.find(
       (v) =>
         Array.isArray(v.props.style) &&
-        v.props.style.some((s) => s && s.backgroundColor === theme.well)
+        v.props.style.some((s) => s && s.backgroundColor === theme.surfaceSunken)
     );
     expect(bgView).toBeDefined();
+    expect(bgView.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          backgroundColor: theme.surfaceSunken,
+          opacity: 0.6,
+        }),
+      ])
+    );
+
+    const slotWrapper = root.findByProps({ accessibilityLabel: 'Hold slot, empty' });
+    expect(slotWrapper.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          borderColor: theme.line,
+        }),
+      ])
+    );
   });
 
   test('dims slot and marks accessibility label as locked when canHold is false', () => {
@@ -163,9 +181,15 @@ describe('HoldSlot component', () => {
     expect(slotWrapper).toBeDefined();
     expect(slotWrapper.props.style).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ opacity: 0.45 }),
+        expect.objectContaining({ opacity: 0.4 }),
       ])
     );
+
+    const Icon = require('../components/Icon').default;
+    const lockIcons = root.findAllByType(Icon).filter((i) => i.props.name === 'lock');
+    expect(lockIcons).toHaveLength(1);
+    expect(lockIcons[0].props.size).toBe(14);
+    expect(lockIcons[0].props.color).toBe(theme.inkMuted);
   });
 
   test('renders held piece when piece is provided', () => {
@@ -288,6 +312,155 @@ describe('HoldSlot component', () => {
     const scaleObj = transformStyle.transform.find((t) => typeof t.scale === 'number');
     expect(scaleObj.scale).toBeCloseTo(74 / 232, 5);
     expect(scaleObj.scale).toBeLessThan(0.55);
+  });
+
+  test('renders arrow-left-right icon of size 18 when empty, and hides it when piece is held', () => {
+    const Icon = require('../components/Icon').default;
+
+    // 1. Empty slot
+    let emptyTree;
+    act(() => {
+      emptyTree = renderer.create(
+        <HoldSlot
+          piece={null}
+          slotWidth={80}
+          slotHeight={96}
+          cellSize={40}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={mockSharedOffset}
+          slotBoardOffsetY={mockSharedOffset}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          canHold={true}
+          theme={theme}
+        />
+      );
+    });
+
+    const emptyIcons = emptyTree.root
+      .findAllByType(Icon)
+      .filter((i) => i.props.name === 'arrow-left-right');
+    expect(emptyIcons).toHaveLength(1);
+    expect(emptyIcons[0].props.size).toBe(18);
+    expect(emptyIcons[0].props.color).toBe(theme.inkMuted);
+
+    // 2. Occupied slot
+    let occupiedTree;
+    act(() => {
+      occupiedTree = renderer.create(
+        <HoldSlot
+          piece={{ color: 0, cells: [[0, 0]] }}
+          slotWidth={80}
+          slotHeight={96}
+          cellSize={40}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={mockSharedOffset}
+          slotBoardOffsetY={mockSharedOffset}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          canHold={true}
+          theme={theme}
+        />
+      );
+    });
+
+    const occupiedSwapIcons = occupiedTree.root
+      .findAllByType(Icon)
+      .filter((i) => i.props.name === 'arrow-left-right');
+    expect(occupiedSwapIcons).toHaveLength(0);
+
+    // "Hold" label is still rendered below
+    const holdLabel = occupiedTree.root.findByProps({ children: 'Hold' });
+    expect(holdLabel).toBeDefined();
+    const flatLabel = StyleSheet.flatten(holdLabel.props.style);
+    expect(flatLabel.fontFamily).toBe('Figtree_500Medium');
+    expect(flatLabel.fontSize).toBe(12);
+    expect(flatLabel.marginTop).toBe(4);
+    expect(flatLabel.color).toBe(theme.inkMuted);
+  });
+
+  test('renders socket background with opacity 1.0 in dark mode', () => {
+    const darkTheme = resolveTheme('dark');
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <HoldSlot
+          piece={null}
+          slotWidth={80}
+          slotHeight={96}
+          cellSize={40}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={mockSharedOffset}
+          slotBoardOffsetY={mockSharedOffset}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          canHold={true}
+          theme={darkTheme}
+        />
+      );
+    });
+
+    const views = tree.root.findAllByType(require('react-native').View);
+    const bgView = views.find(
+      (v) =>
+        Array.isArray(v.props.style) &&
+        v.props.style.some((s) => s && s.backgroundColor === darkTheme.surfaceSunken)
+    );
+    expect(bgView).toBeDefined();
+    expect(bgView.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          backgroundColor: darkTheme.surfaceSunken,
+          opacity: 1.0,
+        }),
+      ])
+    );
+  });
+
+  test('hover highlight overlay uses theme.accent border and theme.accentSoft background', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <HoldSlot
+          piece={null}
+          slotWidth={80}
+          slotHeight={96}
+          cellSize={40}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={mockSharedOffset}
+          slotBoardOffsetY={mockSharedOffset}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          canHold={true}
+          isHovered={{ value: true }}
+          theme={theme}
+        />
+      );
+    });
+
+    const views = tree.root.findAllByType(require('react-native').View);
+    const highlight = views.find(
+      (v) =>
+        Array.isArray(v.props.style) &&
+        v.props.style.some((s) => s && s.borderColor === theme.accent)
+    );
+    expect(highlight).toBeDefined();
+    expect(highlight.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          borderColor: theme.accent,
+          backgroundColor: theme.accentSoft,
+        }),
+      ])
+    );
   });
 });
 

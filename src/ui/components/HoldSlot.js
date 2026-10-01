@@ -8,6 +8,8 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import Piece from './Piece';
+import Icon from './Icon';
+import { useTheme } from '../theme';
 import { getPieceDimensions, calculateRestScale } from '../boardLayout';
 import { canPlace } from '../../engine/board';
 
@@ -53,7 +55,11 @@ function HoldSlot({
   isHovered,
   reduceMotion = false,
   theme,
+  style,
 }) {
+  const hookTheme = useTheme();
+  const activeTheme = theme || hookTheme;
+
   const { width: pieceWidth, height: pieceHeight } = getPieceDimensions(
     piece,
     cellSize,
@@ -295,6 +301,10 @@ function HoldSlot({
     ghost,
   ]);
 
+  const animatedContainerStyle = useAnimatedStyle(() => ({
+    zIndex: isDragging.value ? 9999 : 1,
+  }));
+
   const animatedSlotWrapperStyle = useAnimatedStyle(() => ({
     zIndex: isDragging.value ? 9999 : 1,
     elevation: isDragging.value ? 9999 : 0,
@@ -332,7 +342,7 @@ function HoldSlot({
     };
   });
 
-  const slotOpacity = canHold ? 1.0 : 0.45;
+  const socketOpacity = canHold ? 1.0 : 0.4;
   const accessibilityLabel = !canHold
     ? 'Hold slot, locked'
     : piece
@@ -340,81 +350,113 @@ function HoldSlot({
     : 'Hold slot, empty';
 
   return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
-        style={[
-          styles.slotWrapper,
-          {
-            width: slotWidth,
-            height: slotHeight,
-            opacity: slotOpacity,
-          },
-          animatedSlotWrapperStyle,
-        ]}
-      >
-        {/* Slot Background in theme well color */}
-        <View
-          style={[styles.slotBackground, { backgroundColor: theme.well }]}
-        />
-
-        {/* Hover Highlight Overlay */}
+    <Animated.View
+      style={[
+        styles.container,
+        { width: slotWidth },
+        animatedContainerStyle,
+        style,
+      ]}
+    >
+      <GestureDetector gesture={panGesture}>
         <Animated.View
-          pointerEvents="none"
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
           style={[
-            styles.highlightOverlay,
+            styles.slotWrapper,
             {
-              borderColor: theme.accent,
-              backgroundColor: theme.accent + '18',
+              width: slotWidth,
+              height: slotHeight,
+              borderColor: activeTheme.line,
+              opacity: socketOpacity,
             },
-            highlightAnimatedStyle,
+            animatedSlotWrapperStyle,
           ]}
-        />
-
-        {/* Empty state: subtle dashed border with "Hold" */}
-        {!piece && (
+        >
+          {/* Socket Background in theme surfaceSunken (opacity 0.6 in light, 1.0 in dark) */}
           <View
             style={[
-              styles.emptyStateContainer,
-              { borderColor: theme.cellEmpty },
+              styles.slotBackground,
+              {
+                backgroundColor: activeTheme.surfaceSunken,
+                opacity: activeTheme.isDark ? 1.0 : 0.6,
+              },
             ]}
-          >
-            <Text style={[styles.emptyStateText, { color: theme.inkMuted }]}>
-              Hold
-            </Text>
-          </View>
-        )}
+          />
 
-        {/* Held piece displayed at rest scale */}
-        {piece && (
+          {/* Hover Highlight Overlay */}
           <Animated.View
+            pointerEvents="none"
             style={[
-              styles.pieceWrapper,
-              { width: pieceWidth, height: pieceHeight },
-              animatedPieceStyle,
+              styles.highlightOverlay,
+              {
+                borderColor: activeTheme.accent,
+                backgroundColor: activeTheme.accentSoft,
+              },
+              highlightAnimatedStyle,
             ]}
-          >
-            <Piece
-              cells={piece.cells}
-              color={piece.color}
-              cellSize={cellSize}
-              gap={gap}
-            />
-          </Animated.View>
-        )}
-      </Animated.View>
-    </GestureDetector>
+          />
+
+          {/* Locked state: 14pt Icon "lock" in top right */}
+          {!canHold && (
+            <View style={styles.lockBadge} pointerEvents="none">
+              <Icon name="lock" size={14} color={activeTheme.inkMuted} />
+            </View>
+          )}
+
+          {/* Empty state: 18pt Icon "arrow-left-right" centered */}
+          {!piece && (
+            <View style={styles.emptyIconContainer} pointerEvents="none">
+              <Icon
+                name="arrow-left-right"
+                size={18}
+                color={activeTheme.inkMuted}
+              />
+            </View>
+          )}
+
+          {/* Held piece displayed at rest scale */}
+          {piece && (
+            <Animated.View
+              style={[
+                styles.pieceWrapper,
+                { width: pieceWidth, height: pieceHeight },
+                animatedPieceStyle,
+              ]}
+            >
+              <Piece
+                cells={piece.cells}
+                color={piece.color}
+                cellSize={cellSize}
+                gap={gap}
+              />
+            </Animated.View>
+          )}
+        </Animated.View>
+      </GestureDetector>
+
+      {/* "Hold" label below socket with 4pt gap */}
+      <Text style={[styles.holdLabel, { color: activeTheme.inkMuted }]}>
+        Hold
+      </Text>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'visible',
+  },
   slotWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     overflow: 'visible',
-    borderRadius: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
   },
   slotBackground: {
     position: 'absolute',
@@ -422,37 +464,44 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 14,
+    borderRadius: 14.5,
   },
   highlightOverlay: {
+    position: 'absolute',
+    left: -1.5,
+    top: -1.5,
+    right: -1.5,
+    bottom: -1.5,
+    borderRadius: 16,
+    borderWidth: 2,
+    zIndex: 2,
+  },
+  lockBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    zIndex: 3,
+  },
+  emptyIconContainer: {
     position: 'absolute',
     left: 0,
     top: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 14,
-    borderWidth: 2,
-    zIndex: 2,
-  },
-  emptyStateContainer: {
-    width: '78%',
-    height: '78%',
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  emptyStateText: {
-    fontFamily: 'Figtree_500Medium',
-    fontSize: 13,
-    letterSpacing: 0.2,
-    opacity: 0.7,
+    zIndex: 1,
   },
   pieceWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
+  },
+  holdLabel: {
+    fontFamily: 'Figtree_500Medium',
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
 
