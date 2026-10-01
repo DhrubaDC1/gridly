@@ -7,6 +7,8 @@ import {
   restoreGame,
 } from '../engine/game';
 import { useProgress } from '../store/useProgress';
+import { playFeedbackForEvents } from './eventsFeedback';
+import { buildClearingDescription } from './clearWave';
 
 /**
  * Generates a random 32-bit positive integer seed for deterministic engine runs.
@@ -37,6 +39,7 @@ export function createGameController(options = {}) {
   } = options;
 
   let state = null;
+  let clearing = null;
 
   if (initialState) {
     state = initialState;
@@ -65,7 +68,7 @@ export function createGameController(options = {}) {
   function notifyState() {
     const listeners = Array.from(stateSubscribers);
     for (let i = 0; i < listeners.length; i++) {
-      listeners[i](state);
+      listeners[i](state, clearing);
     }
   }
 
@@ -116,14 +119,17 @@ export function createGameController(options = {}) {
       return false;
     }
 
+    const prevState = state;
     const result = placePiece(state, source, row, col);
     if (result.state === state || result.events.length === 0) {
       return false;
     }
 
     state = result.state;
+    clearing = buildClearingDescription(prevState, result.events);
     notifyState();
     notifyEvents(result.events);
+    playFeedbackForEvents(result.events);
     syncPersistence();
     return true;
   }
@@ -145,6 +151,7 @@ export function createGameController(options = {}) {
     }
 
     state = result.state;
+    clearing = null;
     notifyState();
     notifyEvents(result.events);
     syncPersistence();
@@ -159,11 +166,20 @@ export function createGameController(options = {}) {
   function restart(newSeed) {
     const seed = typeof newSeed === 'number' ? newSeed : generateSeed();
     state = createGame({ seed, mode });
+    clearing = null;
     notifyState();
 
     if (persist) {
       useProgress.getState().clearInProgress(mode);
     }
+  }
+
+  /**
+   * Clears the current clearing description (called when wave animation completes).
+   */
+  function clearClearing() {
+    clearing = null;
+    notifyState();
   }
 
   /**
@@ -183,7 +199,7 @@ export function createGameController(options = {}) {
   /**
    * Subscribes to state updates (used internally by React hook).
    *
-   * @param {(state: import('../engine/game').GameState) => void} listener
+   * @param {(state: import('../engine/game').GameState, clearing: Object | null) => void} listener
    * @returns {() => void} Unsubscribe function.
    */
   function subscribeState(listener) {
@@ -199,6 +215,11 @@ export function createGameController(options = {}) {
       return state;
     },
     getState: () => state,
+    get clearing() {
+      return clearing;
+    },
+    getClearing: () => clearing,
+    clearClearing,
     place,
     hold,
     restart,
@@ -213,6 +234,8 @@ export function createGameController(options = {}) {
  * @param {Object} [options]
  * @returns {{
  *   state: import('../engine/game').GameState,
+ *   clearing: Object | null,
+ *   onClearingComplete: () => void,
  *   place: (source: number | 'hold', row: number, col: number) => boolean,
  *   hold: (trayIndex: number) => boolean,
  *   restart: (newSeed?: number) => void,
@@ -227,15 +250,24 @@ export function useGameController(options = {}) {
   const controller = controllerRef.current;
 
   const [state, setState] = useState(() => controller.state);
+  const [clearing, setClearing] = useState(() => controller.clearing);
 
   useEffect(() => {
-    return controller.subscribeState((newState) => {
+    return controller.subscribeState((newState, newClearing) => {
       setState(newState);
+      setClearing(newClearing ?? controller.clearing);
     });
   }, [controller]);
 
+  const onClearingComplete = () => {
+    controller.clearClearing();
+    setClearing(null);
+  };
+
   return {
     state,
+    clearing,
+    onClearingComplete,
     place: controller.place,
     hold: controller.hold,
     restart: controller.restart,

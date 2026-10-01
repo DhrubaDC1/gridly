@@ -48,6 +48,7 @@ function HoldSlot({
   slotBoardOffsetY,
   ghost,
   onPlace,
+  onPickup,
   canHold = true,
   isHovered,
   reduceMotion = false,
@@ -100,6 +101,9 @@ function HoldSlot({
   const onPlaceRef = useRef(onPlace);
   onPlaceRef.current = onPlace;
 
+  const onPickupRef = useRef(onPickup);
+  onPickupRef.current = onPickup;
+
   const pieceRef = useRef(piece);
   pieceRef.current = piece;
 
@@ -123,6 +127,7 @@ function HoldSlot({
 
   const handleDragBeginJS = (p) => {
     ghostRef.current?.setActiveGhostPiece(p);
+    onPickupRef.current?.();
   };
 
   const handleDragEndJS = () => {

@@ -61,6 +61,7 @@ function TraySlot({
   ghost,
   onPlace,
   onHold,
+  onPickup,
   reduceMotion,
   theme,
 }) {
@@ -117,6 +118,9 @@ function TraySlot({
   const onHoldRef = useRef(onHold);
   onHoldRef.current = onHold;
 
+  const onPickupRef = useRef(onPickup);
+  onPickupRef.current = onPickup;
+
   const pieceRef = useRef(piece);
   pieceRef.current = piece;
 
@@ -140,6 +144,7 @@ function TraySlot({
 
   const handleDragBeginJS = (p) => {
     ghostRef.current?.setActiveGhostPiece(p);
+    onPickupRef.current?.();
   };
 
   const handleDragEndJS = () => {

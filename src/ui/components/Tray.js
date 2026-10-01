@@ -59,6 +59,7 @@ function Tray({
   ghost,
   onPlace,
   onHold,
+  onPickup,
   onTrayLayout,
   style,
 }) {
@@ -147,6 +148,7 @@ function Tray({
           ghost={ghost}
           onPlace={onPlace}
           onHold={onHold}
+          onPickup={onPickup}
           reduceMotion={reduceMotion}
           theme={theme}
         />

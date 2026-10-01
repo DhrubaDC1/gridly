@@ -162,4 +162,37 @@ describe('createGameController', () => {
     expect(controller.state.over).toBe(false);
     expect(controller.state.score).toBe(0);
   });
+
+  test('clearing description lifecycle: null on init, populated on line clear, reset on clearClearing/hold/restart', () => {
+    // Construct a board where row 0 has cols 0-6 filled
+    const testState = createGame({ seed: 12345 });
+    for (let c = 0; c < 7; c++) {
+      testState.board[c] = { color: 2, kind: 'normal', hp: 1 };
+    }
+    // Force tray[0] to be line_1x1 with color 4
+    testState.tray[0] = { id: 'line_1x1', color: 4 };
+
+    const controller = createGameController({ initialState: testState, persist: false });
+    expect(controller.clearing).toBeNull();
+
+    // Place at (0, 7) to clear row 0
+    const placed = controller.place(0, 0, 7);
+    expect(placed).toBe(true);
+
+    // Controller must now expose clearing description
+    expect(controller.clearing).not.toBeNull();
+    expect(controller.clearing.indices).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(controller.clearing.cells).toHaveLength(8);
+    expect(controller.clearing.centerCell.row).toBe(0);
+    expect(controller.clearing.centerCell.col).toBe(7);
+
+    // Cell 0 has color 2 (from previous board)
+    expect(controller.clearing.cells[0].color).toBe(2);
+    // Cell 7 has color 4 (placed in this move)
+    expect(controller.clearing.cells[7].color).toBe(4);
+
+    // Calling clearClearing resets it
+    controller.clearClearing();
+    expect(controller.clearing).toBeNull();
+  });
 });

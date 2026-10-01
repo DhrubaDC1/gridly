@@ -262,4 +262,36 @@ describe('Tray and TraySlot components', () => {
 
     expect(mockGhost.setActiveGhostPiece).toHaveBeenCalledWith(samplePiece);
   });
+
+  test('drag start calls onPickup callback if provided', () => {
+    const mockOnPickup = jest.fn();
+    act(() => {
+      renderer.create(
+        <TraySlot
+          slotIndex={0}
+          piece={samplePiece}
+          slotWidth={80}
+          slotHeight={96}
+          cellSize={35}
+          gap={3}
+          padding={8}
+          boardRef={{ current: Array(64).fill(null) }}
+          slotBoardOffsetX={{ value: 0 }}
+          slotBoardOffsetY={{ value: 0 }}
+          ghost={mockGhost}
+          onPlace={jest.fn()}
+          onPickup={mockOnPickup}
+          theme={theme}
+        />
+      );
+    });
+
+    const gesture = capturedGestures[capturedGestures.length - 1];
+    const { beginCb } = gesture._getHandlers();
+    act(() => {
+      beginCb({ x: 40, y: 48 });
+    });
+
+    expect(mockOnPickup).toHaveBeenCalledTimes(1);
+  });
 });

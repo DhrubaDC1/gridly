@@ -18,10 +18,13 @@ import Board from '../src/ui/components/Board';
 import Piece from '../src/ui/components/Piece';
 import Tray from '../src/ui/components/Tray';
 import HoldSlot from '../src/ui/components/HoldSlot';
+import ScoreTicker from '../src/ui/components/ScoreTicker';
+import ComboLabel from '../src/ui/components/ComboLabel';
 import { getDefaultBoardSize, getBoardMetrics } from '../src/ui/boardLayout';
 import { useGameController } from '../src/game/useGameController';
 import { adaptPiece, adaptTray } from '../src/game/adapter';
 import { useProgress } from '../src/store/useProgress';
+import { onPickup } from '../src/services/feedback';
 
 export default function ClassicScreen() {
   const theme = useTheme();
@@ -29,7 +32,15 @@ export default function ClassicScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
 
-  const { state, place, hold, restart } = useGameController();
+  const {
+    state,
+    clearing,
+    onClearingComplete,
+    place,
+    hold,
+    restart,
+    subscribe,
+  } = useGameController();
   const savedBestScore = useProgress((s) => s.stats.bestScore.classic);
   const bestScore = Math.max(savedBestScore || 0, state.score);
 
@@ -183,9 +194,7 @@ export default function ClassicScreen() {
 
       {/* Score Section */}
       <View style={styles.scoreContainer}>
-        <Text style={[styles.score, { color: theme.ink }]}>
-          {state.score.toLocaleString()}
-        </Text>
+        <ScoreTicker score={state.score} />
         <Text style={[styles.bestScore, { color: theme.inkMuted }]}>
           best {bestScore.toLocaleString()}
         </Text>
@@ -196,7 +205,14 @@ export default function ClassicScreen() {
         onLayout={(e) => setBoardLayout(e.nativeEvent.layout)}
         style={[styles.boardContainer, { width: boardSize, height: boardSize }]}
       >
-        <Board board={state.board} size={boardSize} />
+        <Board
+          board={state.board}
+          size={boardSize}
+          clearing={clearing}
+          subscribe={subscribe}
+          onClearingComplete={onClearingComplete}
+        />
+        <ComboLabel subscribe={subscribe} />
         <Animated.View
           pointerEvents="none"
           style={[styles.ghostOverlay, ghostAnimatedStyle]}
@@ -229,6 +245,7 @@ export default function ClassicScreen() {
           slotBoardOffsetY={holdBoardOffsetY}
           ghost={ghostObject}
           onPlace={handlePlaceHeldPiece}
+          onPickup={onPickup}
           canHold={canHold}
           isHovered={isHoldHovered}
           reduceMotion={reduceMotion}
@@ -254,6 +271,7 @@ export default function ClassicScreen() {
           ghost={ghostObject}
           onPlace={handlePlacePiece}
           onHold={handleHoldFromTray}
+          onPickup={onPickup}
         />
       </View>
 
