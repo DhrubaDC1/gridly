@@ -21,6 +21,7 @@ import HoldSlot from '../src/ui/components/HoldSlot';
 import ScoreTicker from '../src/ui/components/ScoreTicker';
 import ComboLabel from '../src/ui/components/ComboLabel';
 import PauseMenu from '../src/ui/components/PauseMenu';
+import GameOver from '../src/ui/components/GameOver';
 import HandHint from '../src/ui/components/HandHint';
 import { getDefaultBoardSize, getBoardMetrics } from '../src/ui/boardLayout';
 import { useGameController } from '../src/game/useGameController';
@@ -375,34 +376,15 @@ export default function ClassicScreen() {
       />
 
       {/* Game Over Overlay */}
-      {state.over && (
-        <View style={styles.gameOverOverlay}>
-          <View
-            style={[styles.gameOverCard, { backgroundColor: theme.surface }]}
-          >
-            <Text style={[styles.gameOverTitle, { color: theme.ink }]}>
-              Game over
-            </Text>
-            <Text style={[styles.gameOverScore, { color: theme.ink }]}>
-              {state.score.toLocaleString()}
-            </Text>
-            <Text style={[styles.gameOverBest, { color: theme.inkMuted }]}>
-              best {bestScore.toLocaleString()}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Play again"
-              onPress={() => restart()}
-              style={[
-                styles.playAgainButton,
-                { backgroundColor: theme.accent },
-              ]}
-            >
-              <Text style={styles.playAgainText}>Play again</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
+      <GameOver
+        visible={state.over}
+        score={state.score}
+        stats={state.stats}
+        previousBestScore={savedBestScore}
+        onPlayAgain={handleRestart}
+        onHome={handleQuit}
+        theme={theme}
+      />
     </View>
   );
 }
@@ -458,52 +440,5 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     position: 'relative',
     zIndex: 100,
-  },
-  gameOverOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    elevation: 1000,
-    paddingHorizontal: 24,
-  },
-  gameOverCard: {
-    width: '100%',
-    maxWidth: 320,
-    borderRadius: 24,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  gameOverTitle: {
-    fontFamily: 'Unbounded_600SemiBold',
-    fontSize: 20,
-    marginBottom: 8,
-  },
-  gameOverScore: {
-    fontFamily: 'Unbounded_700Bold',
-    fontSize: 40,
-    letterSpacing: -1,
-    marginBottom: 4,
-  },
-  gameOverBest: {
-    fontFamily: 'Figtree_500Medium',
-    fontSize: 14,
-    marginBottom: 24,
-  },
-  playAgainButton: {
-    minWidth: 160,
-    minHeight: 48,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playAgainText: {
-    fontFamily: 'Figtree_600SemiBold',
-    fontSize: 16,
-    color: '#FFFFFF',
   },
 });

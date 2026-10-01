@@ -114,17 +114,6 @@ export function createGameController(options = {}) {
     } else {
       useProgress.getState().setInProgress(mode, serializeGame(state));
     }
-
-    const currentBest =
-      useProgress.getState().stats?.bestScore?.[mode] ?? 0;
-    if (state.score > currentBest) {
-      useProgress.getState().updateStats({
-        bestScore: {
-          ...useProgress.getState().stats.bestScore,
-          [mode]: state.score,
-        },
-      });
-    }
   }
 
   function pause() {
@@ -182,7 +171,7 @@ export function createGameController(options = {}) {
 
     notifyState();
     notifyEvents(result.events);
-    playFeedbackForEvents(result.events);
+    playFeedbackForEvents(result.events.filter((e) => e.type !== 'gameOver'));
     syncPersistence();
     return true;
   }
