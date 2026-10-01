@@ -2,53 +2,100 @@ import { useColorScheme } from 'react-native';
 import { useSettings } from '../store/useSettings';
 
 export const lightColors = {
-  bg: '#EDF0F3',
-  surface: '#F8F9FB',
-  well: '#DDE2E8',
-  cellEmpty: '#D0D6DE',
-  ink: '#1D2433',
-  inkMuted: '#697386',
-  accent: '#3F5FA8',
+  bg: '#F4F1EC', // porcelain
+  bgDeep: '#EAE5DC', // bottom of background gradient
+  spotlight: '#FBF9F5', // radial light pool behind board
+  surface: '#FFFFFF', // cards, sheets
+  surfaceSunken: '#E9E4DB', // tray sockets, chips, segmented track
+  line: '#E0D9CD', // hairlines
+  well: '#CFC6B6', // board tray (stone)
+  wellShadow: 'rgba(60,45,25,0.22)',
+  cellEmpty: '#DCD5C8', // socket
+  socketTop: '#C9C0B0', // 1px inner top (deboss)
+  socketBottom: '#E8E2D7', // 1px inner bottom lip
+  ink: '#1B1F2A', // 14.6:1 on bg
+  inkMuted: '#5C6372', // 5.35:1 on bg, 6.03 on surface, 4.76 on surfaceSunken
+  accent: '#2E52CC', // 5.83:1 on bg
+  onAccent: '#FFFFFF', // 6.57:1 on accent
+  accentSoft: '#DCE3F8',
+  danger: '#C8372D', // 4.61:1 on bg
+  success: '#1E8A5F',
+  star: '#F2B33D',
+  starEmpty: '#D6CFC2',
+  scrim: 'rgba(14,18,24,0.55)',
 };
 
 export const darkColors = {
-  bg: '#161B24',
-  surface: '#1F2531',
-  well: '#1B212B',
-  cellEmpty: '#28303D',
-  ink: '#E7EAF0',
-  inkMuted: '#8D96A8',
-  accent: '#8FA7E0',
+  bg: '#0E1218',
+  bgDeep: '#0A0D12',
+  spotlight: '#161C26',
+  surface: '#171C25',
+  surfaceSunken: '#12161D',
+  line: '#232A36',
+  well: '#0A0D12',
+  wellShadow: 'rgba(0,0,0,0.5)',
+  cellEmpty: '#1A1F29',
+  socketTop: '#12161D',
+  socketBottom: '#222834',
+  ink: '#ECEFF5', // 16.3:1
+  inkMuted: '#97A1B4', // 7.22:1 on bg, 6.57 on surface
+  accent: '#8EA8FF', // 8.22:1 on bg
+  onAccent: '#0E1218', // 8.22:1 on accent
+  accentSoft: '#1E2740',
+  danger: '#FF7A6E', // 7.39:1
+  success: '#4CD39A',
+  star: '#FFC452',
+  starEmpty: '#2A303C',
+  scrim: 'rgba(0,0,0,0.6)',
 };
 
-export const blockColors = [
-  '#5B7DB1', // 0: Harbor
-  '#7FA38A', // 1: Sage
-  '#B07FA0', // 2: Heather
-  '#D1A84B', // 3: Ochre
-  '#9189C9', // 4: Lavender
-  '#4E9C9A', // 5: Lagoon
+// base / top (gradient start) / edge (bottom bevel, >=3:1 vs light cellEmpty) / glyph ink
+export const glazes = [
+  { name: 'Cobalt', glyph: 'dot', light: { base: '#3D6FE0', top: '#5A88F0', edge: '#2448A8' }, dark: { base: '#5B8AF0', top: '#7BA3FF', edge: '#3360C8' }, glyphInk: 'rgba(255,255,255,0.55)' },
+  { name: 'Jade', glyph: 'ring', light: { base: '#2FA87A', top: '#4DC294', edge: '#1B7655' }, dark: { base: '#3DC08E', top: '#5FD7A6', edge: '#23885F' }, glyphInk: 'rgba(14,18,24,0.45)' },
+  { name: 'Persimmon', glyph: 'bar', light: { base: '#F06A4D', top: '#FF8A6E', edge: '#B4402A' }, dark: { base: '#FF7D5E', top: '#FF9C82', edge: '#C24A31' }, glyphInk: 'rgba(255,255,255,0.55)' },
+  { name: 'Saffron', glyph: 'cross', light: { base: '#F2B33D', top: '#FFCB62', edge: '#96660F' }, dark: { base: '#FFC452', top: '#FFD67E', edge: '#B07A1C' }, glyphInk: 'rgba(14,18,24,0.45)' },
+  { name: 'Iris', glyph: 'triangle', light: { base: '#8B6CF0', top: '#A48BFA', edge: '#5A40C0' }, dark: { base: '#A08AF7', top: '#B8A6FF', edge: '#6B50D6' }, glyphInk: 'rgba(255,255,255,0.55)' },
+  { name: 'Lagoon', glyph: 'diamond', light: { base: '#1FB0C2', top: '#45C8D7', edge: '#137F8D' }, dark: { base: '#33C4D6', top: '#5FD8E6', edge: '#188F9E' }, glyphInk: 'rgba(14,18,24,0.45)' },
 ];
 
-export const blockColorsDark = [
-  '#6687BC', // 0: Harbor (slightly lifted brightness)
-  '#8BB097', // 1: Sage
-  '#BD8DAE', // 2: Heather
-  '#DCB45A', // 3: Ochre
-  '#9F97D7', // 4: Lavender
-  '#5AA7A5', // 5: Lagoon
-];
+export const glazeFx = {
+  sheenFrom: 'rgba(255,255,255,0.22)',
+  sheenTo: 'rgba(255,255,255,0)',
+  glint: 'rgba(255,255,255,0.55)',
+  flash: '#FFFFFF',
+};
 
-export const colorblindGlyphs = ['dot', 'ring', 'bar', 'cross', 'triangle', 'diamond'];
+/**
+ * Mix two hex colors by ratio (0 to 1).
+ * Default 0.5 mixes evenly.
+ *
+ * @param {string} hex1
+ * @param {string} hex2
+ * @param {number} [ratio=0.5]
+ * @returns {string}
+ */
+export function mixColors(hex1, hex2, ratio = 0.5) {
+  const c1 = parseInt(hex1.replace('#', ''), 16);
+  const c2 = parseInt(hex2.replace('#', ''), 16);
+  const r = Math.round(((c1 >> 16) & 0xff) * (1 - ratio) + ((c2 >> 16) & 0xff) * ratio);
+  const g = Math.round(((c1 >> 8) & 0xff) * (1 - ratio) + ((c2 >> 8) & 0xff) * ratio);
+  const b = Math.round((c1 & 0xff) * (1 - ratio) + (c2 & 0xff) * ratio);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+}
 
-export const blockDefinitions = [
-  { index: 0, name: 'Harbor', color: '#5B7DB1', colorDark: '#6687BC', glyph: 'dot' },
-  { index: 1, name: 'Sage', color: '#7FA38A', colorDark: '#8BB097', glyph: 'ring' },
-  { index: 2, name: 'Heather', color: '#B07FA0', colorDark: '#BD8DAE', glyph: 'bar' },
-  { index: 3, name: 'Ochre', color: '#D1A84B', colorDark: '#DCB45A', glyph: 'cross' },
-  { index: 4, name: 'Lavender', color: '#9189C9', colorDark: '#9F97D7', glyph: 'triangle' },
-  { index: 5, name: 'Lagoon', color: '#4E9C9A', colorDark: '#5AA7A5', glyph: 'diamond' },
-];
+export const blockColors = glazes.map((g) => g.light.base);
+export const blockColorsDark = glazes.map((g) => g.dark.base);
+
+export const colorblindGlyphs = glazes.map((g) => g.glyph);
+
+export const blockDefinitions = glazes.map((g, index) => ({
+  index,
+  name: g.name,
+  color: g.light.base,
+  colorDark: g.dark.base,
+  glyph: g.glyph,
+}));
 
 export const spacing = [4, 8, 12, 16, 24, 32, 48];
 
@@ -62,11 +109,31 @@ export const spacingScale = {
   xxxl: 48,
 };
 
+/**
+ * Computes cell radius proportionally: cellSize * 0.16
+ *
+ * @param {number} cellSize
+ * @returns {number}
+ */
+export function cellRadius(cellSize) {
+  return (cellSize ?? 44) * 0.16;
+}
+
+export const getCellRadius = cellRadius;
+export const cell = cellRadius;
+
 export const radius = {
   board: 20,
-  cells: 6,
+  cell: cellRadius,
+  button: 14,
+  card: 18,
+  sheet: 24,
+  chip: 999,
+  // Plural aliases for backward compatibility
   buttons: 14,
+  cards: 18,
   sheets: 24,
+  chips: 999,
 };
 
 export const typeScale = [12, 14, 16, 20, 28, 40, 56];
@@ -112,10 +179,25 @@ export function resolveTheme(themeSetting = 'system', systemScheme = 'light') {
   const colors = isDark ? darkColors : lightColors;
   const blocks = isDark ? blockColorsDark : blockColors;
 
+  const glaze = glazes.map((g) => {
+    const schemeGlaze = g[resolvedScheme];
+    return {
+      name: g.name,
+      glyph: g.glyph,
+      base: schemeGlaze.base,
+      top: schemeGlaze.top,
+      edge: schemeGlaze.edge,
+      glyphInk: g.glyphInk,
+      lockBase: mixColors(schemeGlaze.base, '#8A8F99', 0.5),
+    };
+  });
+
   return {
     isDark,
     colorScheme: resolvedScheme,
     colors,
+    ...colors,
+    // Explicit token aliases guaranteeing backward-compat
     bg: colors.bg,
     surface: colors.surface,
     well: colors.well,
@@ -123,7 +205,11 @@ export function resolveTheme(themeSetting = 'system', systemScheme = 'light') {
     ink: colors.ink,
     inkMuted: colors.inkMuted,
     accent: colors.accent,
+    onAccent: colors.onAccent,
     blocks,
+    glaze,
+    glazes,
+    glazeFx,
     blockColors,
     blockColorsDark,
     blockDefinitions,

@@ -1,10 +1,13 @@
 import {
   lightColors,
   darkColors,
+  glazes,
+  glazeFx,
   blockColors,
   blockColorsDark,
   spacing,
   radius,
+  cellRadius,
   typeScale,
   resolveTheme,
 } from '../../ui/theme';
@@ -20,49 +23,118 @@ describe('Phase 0 - Scaffold & Theme', () => {
   describe('Theme tokens (§9)', () => {
     it('contains exact light color tokens from §9', () => {
       expect(lightColors).toEqual({
-        bg: '#EDF0F3',
-        surface: '#F8F9FB',
-        well: '#DDE2E8',
-        cellEmpty: '#D0D6DE',
-        ink: '#1D2433',
-        inkMuted: '#697386',
-        accent: '#3F5FA8',
+        bg: '#F4F1EC',
+        bgDeep: '#EAE5DC',
+        spotlight: '#FBF9F5',
+        surface: '#FFFFFF',
+        surfaceSunken: '#E9E4DB',
+        line: '#E0D9CD',
+        well: '#CFC6B6',
+        wellShadow: 'rgba(60,45,25,0.22)',
+        cellEmpty: '#DCD5C8',
+        socketTop: '#C9C0B0',
+        socketBottom: '#E8E2D7',
+        ink: '#1B1F2A',
+        inkMuted: '#5C6372',
+        accent: '#2E52CC',
+        onAccent: '#FFFFFF',
+        accentSoft: '#DCE3F8',
+        danger: '#C8372D',
+        success: '#1E8A5F',
+        star: '#F2B33D',
+        starEmpty: '#D6CFC2',
+        scrim: 'rgba(14,18,24,0.55)',
       });
     });
 
     it('contains exact dark color tokens from §9', () => {
       expect(darkColors).toEqual({
-        bg: '#161B24',
-        surface: '#1F2531',
-        well: '#1B212B',
-        cellEmpty: '#28303D',
-        ink: '#E7EAF0',
-        inkMuted: '#8D96A8',
-        accent: '#8FA7E0',
+        bg: '#0E1218',
+        bgDeep: '#0A0D12',
+        spotlight: '#161C26',
+        surface: '#171C25',
+        surfaceSunken: '#12161D',
+        line: '#232A36',
+        well: '#0A0D12',
+        wellShadow: 'rgba(0,0,0,0.5)',
+        cellEmpty: '#1A1F29',
+        socketTop: '#12161D',
+        socketBottom: '#222834',
+        ink: '#ECEFF5',
+        inkMuted: '#97A1B4',
+        accent: '#8EA8FF',
+        onAccent: '#0E1218',
+        accentSoft: '#1E2740',
+        danger: '#FF7A6E',
+        success: '#4CD39A',
+        star: '#FFC452',
+        starEmpty: '#2A303C',
+        scrim: 'rgba(0,0,0,0.6)',
       });
     });
 
     it('contains 6 block colors in order from §9', () => {
       expect(blockColors).toEqual([
-        '#5B7DB1', // Harbor
-        '#7FA38A', // Sage
-        '#B07FA0', // Heather
-        '#D1A84B', // Ochre
-        '#9189C9', // Lavender
-        '#4E9C9A', // Lagoon
+        '#3D6FE0', // Cobalt
+        '#2FA87A', // Jade
+        '#F06A4D', // Persimmon
+        '#F2B33D', // Saffron
+        '#8B6CF0', // Iris
+        '#1FB0C2', // Lagoon
       ]);
-      expect(blockColorsDark).toHaveLength(6);
+      expect(blockColorsDark).toEqual([
+        '#5B8AF0',
+        '#3DC08E',
+        '#FF7D5E',
+        '#FFC452',
+        '#A08AF7',
+        '#33C4D6',
+      ]);
     });
 
     it('contains spacing scale, radius values, and type scale from §9', () => {
       expect(spacing).toEqual([4, 8, 12, 16, 24, 32, 48]);
       expect(radius).toEqual({
         board: 20,
-        cells: 6,
+        cell: expect.any(Function),
+        button: 14,
+        card: 18,
+        sheet: 24,
+        chip: 999,
         buttons: 14,
+        cards: 18,
         sheets: 24,
+        chips: 999,
       });
+      expect(cellRadius(44)).toBeCloseTo(7.04);
+      expect(cellRadius(22)).toBeCloseTo(3.52);
       expect(typeScale).toEqual([12, 14, 16, 20, 28, 40, 56]);
+    });
+
+    it('contains glazes and glazeFx from §6.1', () => {
+      expect(glazes).toHaveLength(6);
+      expect(glazes.map((g) => g.name)).toEqual([
+        'Cobalt',
+        'Jade',
+        'Persimmon',
+        'Saffron',
+        'Iris',
+        'Lagoon',
+      ]);
+      expect(glazes.map((g) => g.glyph)).toEqual([
+        'dot',
+        'ring',
+        'bar',
+        'cross',
+        'triangle',
+        'diamond',
+      ]);
+      expect(glazeFx).toEqual({
+        sheenFrom: 'rgba(255,255,255,0.22)',
+        sheenTo: 'rgba(255,255,255,0)',
+        glint: 'rgba(255,255,255,0.55)',
+        flash: '#FFFFFF',
+      });
     });
   });
 
@@ -72,21 +144,76 @@ describe('Phase 0 - Scaffold & Theme', () => {
       expect(lightTheme.isDark).toBe(false);
       expect(lightTheme.bg).toBe(lightColors.bg);
       expect(lightTheme.surface).toBe(lightColors.surface);
+      expect(lightTheme.onAccent).toBe(lightColors.onAccent);
 
       const darkTheme = resolveTheme('system', 'dark');
       expect(darkTheme.isDark).toBe(true);
       expect(darkTheme.bg).toBe(darkColors.bg);
       expect(darkTheme.surface).toBe(darkColors.surface);
+      expect(darkTheme.onAccent).toBe(darkColors.onAccent);
     });
 
     it('overrides system scheme when theme setting is explicitly light or dark', () => {
       const explicitLight = resolveTheme('light', 'dark');
       expect(explicitLight.isDark).toBe(false);
       expect(explicitLight.bg).toBe(lightColors.bg);
+      expect(explicitLight.onAccent).toBe('#FFFFFF');
 
       const explicitDark = resolveTheme('dark', 'light');
       expect(explicitDark.isDark).toBe(true);
       expect(explicitDark.bg).toBe(darkColors.bg);
+      expect(explicitDark.onAccent).toBe('#0E1218');
+    });
+
+    it('exposes all tokens, blocks as base colors, and glaze with lockBase', () => {
+      const lightTheme = resolveTheme('light');
+      expect(lightTheme.bgDeep).toBe(lightColors.bgDeep);
+      expect(lightTheme.spotlight).toBe(lightColors.spotlight);
+      expect(lightTheme.surfaceSunken).toBe(lightColors.surfaceSunken);
+      expect(lightTheme.wellShadow).toBe(lightColors.wellShadow);
+      expect(lightTheme.socketTop).toBe(lightColors.socketTop);
+      expect(lightTheme.socketBottom).toBe(lightColors.socketBottom);
+      expect(lightTheme.accentSoft).toBe(lightColors.accentSoft);
+      expect(lightTheme.danger).toBe(lightColors.danger);
+      expect(lightTheme.success).toBe(lightColors.success);
+      expect(lightTheme.star).toBe(lightColors.star);
+      expect(lightTheme.starEmpty).toBe(lightColors.starEmpty);
+      expect(lightTheme.scrim).toBe(lightColors.scrim);
+
+      // blocks equal base colors
+      expect(lightTheme.blocks).toEqual(glazes.map((g) => g.light.base));
+      expect(lightTheme.blocks).toEqual([
+        '#3D6FE0',
+        '#2FA87A',
+        '#F06A4D',
+        '#F2B33D',
+        '#8B6CF0',
+        '#1FB0C2',
+      ]);
+
+      // glaze array with lockBase mixed 50% toward #8A8F99
+      expect(lightTheme.glaze).toHaveLength(6);
+      expect(lightTheme.glaze[0]).toEqual({
+        name: 'Cobalt',
+        glyph: 'dot',
+        base: '#3D6FE0',
+        top: '#5A88F0',
+        edge: '#2448A8',
+        glyphInk: 'rgba(255,255,255,0.55)',
+        lockBase: '#647FBD',
+      });
+
+      const darkTheme = resolveTheme('dark');
+      expect(darkTheme.blocks).toEqual(glazes.map((g) => g.dark.base));
+      expect(darkTheme.glaze[0]).toEqual({
+        name: 'Cobalt',
+        glyph: 'dot',
+        base: '#5B8AF0',
+        top: '#7BA3FF',
+        edge: '#3360C8',
+        glyphInk: 'rgba(255,255,255,0.55)',
+        lockBase: '#738DC5',
+      });
     });
   });
 

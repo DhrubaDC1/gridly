@@ -21,7 +21,7 @@ describe('StarRow component', () => {
     });
 
     // First two stars filled, third star empty
-    const starFillColor = '#D1A84B';
+    const starFillColor = '#F2B33D';
     const starEmptyColor = lightColors.cellEmpty;
 
     const flatStyle0 = [].concat(starTexts[0].props.style).reduce((acc, s) => ({ ...acc, ...s }), {});
@@ -63,7 +63,7 @@ describe('StarRow component', () => {
     expect(view.props.accessibilityLabel).toBe('3 of 3 stars');
 
     const starTexts = root.findAllByType('Text');
-    const starFillColor = '#D1A84B';
+    const starFillColor = '#F2B33D';
     starTexts.forEach((t) => {
       const flatStyle = [].concat(t.props.style).reduce((acc, s) => ({ ...acc, ...s }), {});
       expect(flatStyle.color).toBe(starFillColor);
