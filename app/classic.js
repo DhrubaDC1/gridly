@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,29 +8,35 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
 import { useTheme } from '../src/ui/theme';
 import Board from '../src/ui/components/Board';
 import Piece from '../src/ui/components/Piece';
+import Tray from '../src/ui/components/Tray';
 import { getDefaultBoardSize, getBoardMetrics } from '../src/ui/boardLayout';
+import { placePiece } from '../src/engine/board';
 
-// Hardcoded test board containing a few blocks of different colors,
+// Hardcoded initial test board containing a few blocks of different colors,
 // one gem block, and one lock block (hp: 2).
-const TEST_BOARD = Array(64).fill(null);
-TEST_BOARD[18] = { color: 0, kind: 'normal' }; // Row 2, Col 2 (Harbor)
-TEST_BOARD[19] = { color: 1, kind: 'normal' }; // Row 2, Col 3 (Sage)
-TEST_BOARD[25] = { color: 2, kind: 'normal' }; // Row 3, Col 1 (Heather)
-TEST_BOARD[26] = { color: 3, kind: 'normal' }; // Row 3, Col 2 (Ochre)
-TEST_BOARD[27] = { color: 4, kind: 'normal' }; // Row 3, Col 3 (Lavender)
-TEST_BOARD[28] = { color: 5, kind: 'gem' }; // Row 3, Col 4 (Lagoon - gem)
-TEST_BOARD[34] = { color: 3, kind: 'lock', hp: 2 }; // Row 4, Col 2 (Ochre - lock)
-TEST_BOARD[35] = { color: 0, kind: 'normal' }; // Row 4, Col 3 (Harbor)
-TEST_BOARD[36] = { color: 1, kind: 'normal' }; // Row 4, Col 4 (Sage)
-TEST_BOARD[43] = { color: 2, kind: 'normal' }; // Row 5, Col 3 (Heather)
-TEST_BOARD[44] = { color: 4, kind: 'normal' }; // Row 5, Col 4 (Lavender)
-TEST_BOARD[45] = { color: 5, kind: 'normal' }; // Row 5, Col 5 (Lagoon)
+const INITIAL_TEST_BOARD = Array(64).fill(null);
+INITIAL_TEST_BOARD[18] = { color: 0, kind: 'normal' }; // Row 2, Col 2 (Harbor)
+INITIAL_TEST_BOARD[19] = { color: 1, kind: 'normal' }; // Row 2, Col 3 (Sage)
+INITIAL_TEST_BOARD[25] = { color: 2, kind: 'normal' }; // Row 3, Col 1 (Heather)
+INITIAL_TEST_BOARD[26] = { color: 3, kind: 'normal' }; // Row 3, Col 2 (Ochre)
+INITIAL_TEST_BOARD[27] = { color: 4, kind: 'normal' }; // Row 3, Col 3 (Lavender)
+INITIAL_TEST_BOARD[28] = { color: 5, kind: 'gem' }; // Row 3, Col 4 (Lagoon - gem)
+INITIAL_TEST_BOARD[34] = { color: 3, kind: 'lock', hp: 2 }; // Row 4, Col 2 (Ochre - lock)
+INITIAL_TEST_BOARD[35] = { color: 0, kind: 'normal' }; // Row 4, Col 3 (Harbor)
+INITIAL_TEST_BOARD[36] = { color: 1, kind: 'normal' }; // Row 4, Col 4 (Sage)
+INITIAL_TEST_BOARD[43] = { color: 2, kind: 'normal' }; // Row 5, Col 3 (Heather)
+INITIAL_TEST_BOARD[44] = { color: 4, kind: 'normal' }; // Row 5, Col 4 (Lavender)
+INITIAL_TEST_BOARD[45] = { color: 5, kind: 'normal' }; // Row 5, Col 5 (Lagoon)
 
 // Three pieces in a row under the board
-const TEST_PIECES = [
+const INITIAL_TEST_PIECES = [
   {
     color: 0, // Harbor (1x3 line)
     cells: [
@@ -64,9 +70,40 @@ export default function ClassicScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
+  const [board, setBoard] = useState(INITIAL_TEST_BOARD);
+  const [trayPieces, setTrayPieces] = useState(INITIAL_TEST_PIECES);
+  const [ghostPiece, setGhostPiece] = useState(null);
+  const [boardLayout, setBoardLayout] = useState(null);
+
   const boardSize = getDefaultBoardSize(screenWidth);
   const metrics = getBoardMetrics(boardSize);
-  const trayCellSize = Math.round(metrics.cellSize * 0.55);
+
+  // Shared values for ghost preview on board
+  const ghostX = useSharedValue(0);
+  const ghostY = useSharedValue(0);
+  const ghostOpacity = useSharedValue(0);
+
+  const ghostAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: ghostOpacity.value,
+    transform: [
+      { translateX: ghostX.value },
+      { translateY: ghostY.value },
+    ],
+  }));
+
+  const handlePlacePiece = (slotIndex, piece, row, col) => {
+    setBoard((prev) =>
+      placePiece(prev, piece, row, col, piece.color, 'normal')
+    );
+    setTrayPieces((prev) => {
+      const next = [...prev];
+      next[slotIndex] = null;
+      if (next.every((p) => p === null)) {
+        return INITIAL_TEST_PIECES;
+      }
+      return next;
+    });
+  };
 
   return (
     <View
@@ -104,30 +141,40 @@ export default function ClassicScreen() {
       </View>
 
       {/* Hero Board */}
-      <View style={styles.boardContainer}>
-        <Board board={TEST_BOARD} size={boardSize} />
+      <View
+        onLayout={(e) => setBoardLayout(e.nativeEvent.layout)}
+        style={[styles.boardContainer, { width: boardSize, height: boardSize }]}
+      >
+        <Board board={board} size={boardSize} />
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.ghostOverlay, ghostAnimatedStyle]}
+        >
+          {ghostPiece && (
+            <Piece
+              cells={ghostPiece.cells}
+              color={ghostPiece.color}
+              cellSize={metrics.cellSize}
+              ghost
+            />
+          )}
+        </Animated.View>
       </View>
 
       {/* Tray of 3 pieces */}
-      <View style={[styles.trayContainer, { width: boardSize }]}>
-        {TEST_PIECES.map((piece, index) => (
-          <View
-            key={`piece-${index}`}
-            style={[
-              styles.traySlot,
-              {
-                backgroundColor: theme.surface,
-              },
-            ]}
-          >
-            <Piece
-              cells={piece.cells}
-              color={piece.color}
-              cellSize={trayCellSize}
-            />
-          </View>
-        ))}
-      </View>
+      <Tray
+        pieces={trayPieces}
+        boardSize={boardSize}
+        board={board}
+        boardLayout={boardLayout}
+        ghost={{
+          ghostX,
+          ghostY,
+          ghostOpacity,
+          setActiveGhostPiece: setGhostPiece,
+        }}
+        onPlace={handlePlacePiece}
+      />
     </View>
   );
 }
@@ -167,19 +214,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 8,
+    position: 'relative',
   },
-  trayContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 8,
-  },
-  traySlot: {
-    flex: 1,
-    height: 96,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+  ghostOverlay: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
   },
 });

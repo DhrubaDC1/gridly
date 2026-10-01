@@ -191,3 +191,39 @@ export function getCellAtPosition(
     index: row * BOARD_GRID_SIZE + col,
   };
 }
+
+/**
+ * Calculates bounding box and pixel dimensions of a piece at a given cell size.
+ *
+ * @param {{ cells: Array<[number, number] | { r: number, c: number }> }} piece
+ * @param {number} cellSize
+ * @param {number} [gap=DEFAULT_CELL_GAP]
+ * @returns {{ numRows: number, numCols: number, width: number, height: number, minR: number, minC: number }}
+ */
+export function getPieceDimensions(piece, cellSize, gap = DEFAULT_CELL_GAP) {
+  if (!piece || !piece.cells || piece.cells.length === 0) {
+    return { numRows: 0, numCols: 0, width: 0, height: 0, minR: 0, minC: 0 };
+  }
+
+  let minR = Infinity;
+  let maxR = -Infinity;
+  let minC = Infinity;
+  let maxC = -Infinity;
+
+  for (const cell of piece.cells) {
+    const r = Array.isArray(cell) ? cell[0] : cell.r;
+    const c = Array.isArray(cell) ? cell[1] : cell.c;
+    if (r < minR) minR = r;
+    if (r > maxR) maxR = r;
+    if (c < minC) minC = c;
+    if (c > maxC) maxC = c;
+  }
+
+  const numRows = maxR - minR + 1;
+  const numCols = maxC - minC + 1;
+  const width = numCols * cellSize + (numCols - 1) * gap;
+  const height = numRows * cellSize + (numRows - 1) * gap;
+
+  return { numRows, numCols, width, height, minR, minC };
+}
+
