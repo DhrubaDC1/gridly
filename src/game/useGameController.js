@@ -124,7 +124,13 @@ export function createGameController(options = {}) {
     const currentStats = useProgress.getState().stats;
     const gameResult = buildGameResult(finalState, { durationMs, dayKey });
     const nextStats = applyGameResult(currentStats, gameResult);
-    useProgress.getState().setStats(nextStats);
+    const modeKey = finalState.mode || mode;
+    const prevScoreTotals = currentStats.scoreTotals || {};
+    const scoreTotals = {
+      ...prevScoreTotals,
+      [modeKey]: (prevScoreTotals[modeKey] ?? 0) + (finalState.score || 0),
+    };
+    useProgress.getState().setStats({ ...nextStats, scoreTotals });
 
     const currentUnlocked = useProgress.getState().achievements;
     const statUnlocked = evaluate([], nextStats, {

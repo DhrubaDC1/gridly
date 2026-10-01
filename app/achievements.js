@@ -1,24 +1,133 @@
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View, ScrollView, Pressable } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/ui/theme';
 import { useProgress } from '../src/store/useProgress';
+import { ACHIEVEMENTS } from '../src/engine/achievements';
+import { formatUnlockDate, formatDate } from '../src/game/format';
+
+function useSafeInsets() {
+  try {
+    return useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
+  } catch {
+    return { top: 0, bottom: 0, left: 0, right: 0 };
+  }
+}
 
 export default function AchievementsScreen() {
+  const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeInsets();
   const achievements = useProgress((state) => state.achievements);
-  const unlockedCount = Object.keys(achievements).length;
+
+  const totalCount = ACHIEVEMENTS.length;
+  const unlockedCount = ACHIEVEMENTS.filter((item) =>
+    Boolean(achievements[item.id])
+  ).length;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <View style={[styles.card, { backgroundColor: theme.surface }]}>
-        <Text style={[styles.title, { color: theme.ink }]}>Achievements</Text>
-        <Text style={[styles.body, { color: theme.inkMuted }]}>
-          {unlockedCount} of 25 unlocked. Complete challenges across Classic,
-          Blitz, and Adventure to earn badges.
-        </Text>
-        <Text style={[styles.status, { color: theme.accent }]}>
-          Full badge grid arriving in Phase 3b.
-        </Text>
-      </View>
+      <Stack.Screen
+        options={{
+          title: 'Achievements',
+          headerTitleAlign: 'center',
+          headerLeft: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              hitSlop={8}
+              onPress={() => {
+                if (router.canGoBack?.()) {
+                  router.back();
+                } else {
+                  router.replace('/');
+                }
+              }}
+              style={styles.backButton}
+            >
+              <Text style={[styles.backIcon, { color: theme.ink }]}>‹</Text>
+            </Pressable>
+          ),
+        }}
+      />
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: 16,
+            paddingBottom: Math.max(insets.bottom, 24) + 16,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: theme.ink }]}>Achievements</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.inkMuted }]}>
+            {unlockedCount} of {totalCount} unlocked
+          </Text>
+
+          <View style={[styles.progressTrack, { backgroundColor: theme.well }]}>
+            <View
+              style={[
+                styles.progressBar,
+                {
+                  backgroundColor: theme.accent,
+                  width: `${Math.round((unlockedCount / totalCount) * 100)}%`,
+                },
+              ]}
+            />
+          </View>
+        </View>
+
+        <View style={styles.list}>
+          {ACHIEVEMENTS.map((item) => {
+            const unlockedAt = achievements[item.id];
+            const isUnlocked = Boolean(unlockedAt);
+
+            return (
+              <View
+                key={item.id}
+                testID={`achievement-card-${item.id}`}
+                accessible={true}
+                accessibilityLabel={`${item.name}, ${
+                  isUnlocked ? `unlocked ${formatDate(unlockedAt)}` : 'locked'
+                }. ${item.description}`}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: theme.surface,
+                    opacity: isUnlocked ? 1 : 0.45,
+                  },
+                ]}
+              >
+                <View style={styles.cardHeader}>
+                  <Text style={[styles.cardTitle, { color: theme.ink }]}>
+                    {item.name}
+                  </Text>
+                  {isUnlocked && (
+                    <Text style={[styles.badge, { color: theme.accent }]}>✓</Text>
+                  )}
+                </View>
+
+                <Text
+                  style={[styles.cardDescription, { color: theme.inkMuted }]}
+                >
+                  {item.description}
+                </Text>
+
+                {isUnlocked && (
+                  <Text style={[styles.unlockDate, { color: theme.accent }]}>
+                    {formatUnlockDate(unlockedAt)}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -26,31 +135,82 @@ export default function AchievementsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 24,
+    maxWidth: 460,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  backButton: {
+    minWidth: 44,
+    minHeight: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  card: {
-    padding: 24,
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
+  backIcon: {
+    fontSize: 28,
+    lineHeight: 30,
+    fontFamily: 'Figtree_400Regular',
+  },
+  header: {
+    marginBottom: 20,
   },
   title: {
-    fontFamily: 'Unbounded_600SemiBold',
-    fontSize: 24,
+    fontFamily: 'Unbounded_700Bold',
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontFamily: 'Figtree_500Medium',
+    fontSize: 15,
     marginBottom: 12,
   },
-  body: {
-    fontFamily: 'Figtree_400Regular',
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 16,
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    width: '100%',
   },
-  status: {
-    fontFamily: 'Figtree_500Medium',
+  progressBar: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  list: {
+    gap: 12,
+  },
+  card: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  cardTitle: {
+    fontFamily: 'Figtree_600SemiBold',
+    fontSize: 16,
+    flex: 1,
+  },
+  badge: {
+    fontFamily: 'Figtree_600SemiBold',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  cardDescription: {
+    fontFamily: 'Figtree_400Regular',
     fontSize: 14,
+    lineHeight: 20,
+  },
+  unlockDate: {
+    fontFamily: 'Figtree_500Medium',
+    fontSize: 12,
+    marginTop: 8,
   },
 });
