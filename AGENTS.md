@@ -8,6 +8,12 @@ This file is the source of truth. If code and this file disagree, ask before cha
 
 ---
 
+## UI refresh
+
+`docs/UI_REVIEW.md` is the visual source of truth for the Glaze direction.
+
+---
+
 ## 1. Non-negotiable rules
 
 - **JavaScript only.** No TypeScript, no `.ts`/`.tsx` files. Use JSDoc `@typedef` / `@param` in `src/engine/` so shapes stay documented.
@@ -40,7 +46,7 @@ eas build --profile production --platform ios    # App Store
 | Concern | Package |
 |---|---|
 | Framework | `expo` (latest SDK), `expo-router` |
-| Asset loading | `expo-asset` (peer dependency of `expo-audio`) 
+| Asset loading | `expo-asset` (peer dependency of `expo-audio`) |
 | Board rendering | `@shopify/react-native-skia` |
 | Gestures & animation | `react-native-gesture-handler`, `react-native-reanimated` (+ `react-native-worklets` if the SDK requires it) |
 | State | `zustand` (with `persist` middleware) |
@@ -373,38 +379,56 @@ Light:
 
 | token | hex | use |
 |---|---|---|
-| `bg` | `#EDF0F3` | app background (cool fog) |
-| `surface` | `#F8F9FB` | cards, sheets |
-| `well` | `#DDE2E8` | board background |
-| `cellEmpty` | `#D0D6DE` | empty cell |
-| `ink` | `#1D2433` | primary text |
-| `inkMuted` | `#697386` | secondary text |
-| `accent` | `#3F5FA8` | primary buttons, focus |
+| `bg` | `#F4F1EC` | app background (porcelain) |
+| `bgDeep` | `#EAE5DC` | bottom of background gradient |
+| `spotlight` | `#FBF9F5` | radial light pool behind board |
+| `surface` | `#FFFFFF` | cards, sheets |
+| `surfaceSunken` | `#E9E4DB` | tray sockets, chips, segmented track |
+| `line` | `#E0D9CD` | hairlines |
+| `well` | `#CFC6B6` | board background (stone) |
+| `cellEmpty` | `#DCD5C8` | empty cell (socket) |
+| `ink` | `#1B1F2A` | primary text |
+| `inkMuted` | `#5C6372` | secondary text |
+| `accent` | `#2E52CC` | primary buttons, focus |
+| `onAccent` | `#FFFFFF` | text/icon on accent |
+| `danger` | `#C8372D` | low timer/moves, destructive actions |
+| `success` | `#1E8A5F` | timer bonus, completed goals |
+| `star` | `#F2B33D` | filled stars |
+| `scrim` | `rgba(14,18,24,0.55)` | modal overlay scrim |
 
 Dark:
 
 | token | hex |
 |---|---|
-| `bg` | `#161B24` |
-| `surface` | `#1F2531` |
-| `well` | `#1B212B` |
-| `cellEmpty` | `#28303D` |
-| `ink` | `#E7EAF0` |
-| `inkMuted` | `#8D96A8` |
-| `accent` | `#8FA7E0` |
+| `bg` | `#0E1218` |
+| `bgDeep` | `#0A0D12` |
+| `spotlight` | `#161C26` |
+| `surface` | `#171C25` |
+| `surfaceSunken` | `#12161D` |
+| `line` | `#232A36` |
+| `well` | `#0A0D12` |
+| `cellEmpty` | `#1A1F29` |
+| `ink` | `#ECEFF5` |
+| `inkMuted` | `#97A1B4` |
+| `accent` | `#8EA8FF` |
+| `onAccent` | `#0E1218` |
+| `danger` | `#FF7A6E` |
+| `success` | `#4CD39A` |
+| `star` | `#FFC452` |
+| `scrim` | `rgba(0,0,0,0.6)` |
 
-Block colors (same in both themes; slightly lift brightness in dark):
+Block colors (Glaze palette, with base / top / edge in light and dark):
 
-| index | name | hex |
-|---|---|---|
-| 0 | Harbor | `#5B7DB1` |
-| 1 | Sage | `#7FA38A` |
-| 2 | Heather | `#B07FA0` |
-| 3 | Ochre | `#D1A84B` |
-| 4 | Lavender | `#9189C9` |
-| 5 | Lagoon | `#4E9C9A` |
+| index | name | glyph | light (base / top / edge) | dark (base / top / edge) | glyph ink |
+|---|---|---|---|---|---|
+| 0 | Cobalt | dot | `#3D6FE0` / `#5A88F0` / `#2448A8` | `#5B8AF0` / `#7BA3FF` / `#3360C8` | `rgba(255,255,255,0.55)` |
+| 1 | Jade | ring | `#2FA87A` / `#4DC294` / `#1B7655` | `#3DC08E` / `#5FD7A6` / `#23885F` | `rgba(14,18,24,0.45)` |
+| 2 | Persimmon | bar | `#F06A4D` / `#FF8A6E` / `#B4402A` | `#FF7D5E` / `#FF9C82` / `#C24A31` | `rgba(255,255,255,0.55)` |
+| 3 | Saffron | cross | `#F2B33D` / `#FFCB62` / `#96660F` | `#FFC452` / `#FFD67E` / `#B07A1C` | `rgba(14,18,24,0.45)` |
+| 4 | Iris | triangle | `#8B6CF0` / `#A48BFA` / `#5A40C0` | `#A08AF7` / `#B8A6FF` / `#6B50D6` | `rgba(255,255,255,0.55)` |
+| 5 | Lagoon | diamond | `#1FB0C2` / `#45C8D7` / `#137F8D` | `#33C4D6` / `#5FD8E6` / `#188F9E` | `rgba(14,18,24,0.45)` |
 
-**Colorblind mode:** each color index also gets a small inset glyph (dot, ring, bar, cross, triangle, diamond) drawn in Skia at 35% opacity.
+**Colorblind mode:** each color index also gets a small inset glyph (dot, ring, bar, cross, triangle, diamond) drawn in Skia at 45-55% opacity with a per-color ink.
 
 ### Type
 - **Unbounded** (600/700): score, mode titles, big numbers only. Use tabular spacing for the score ticker (fixed-width digits via layout, not a mono font).
@@ -416,11 +440,12 @@ Block colors (same in both themes; slightly lift brightness in dark):
 - Spacing scale: 4, 8, 12, 16, 24, 32, 48.
 - Radius by hierarchy (not one radius for everything):
   - board: 20
-  - cells: 6 (at 44px cells; scale proportionally)
+  - cells: 0.16 times the cell size (≈7 at 44px cells)
   - buttons: 14
+  - cards: 18
   - sheets: 24
 - Cell gap: 3px. Board width: `min(screenWidth − 32, 420)`.
-- Blocks: flat fill, a 1px lighter top-inner highlight, and a 2px darker bottom edge. This is a subtle bevel, not a glossy one. No drop shadows on cards; separate surfaces by tone.
+- Blocks: gradient body, sheen, glint and a 2-3px darker bottom lip. No drop shadows on cards; separate surfaces by tone.
 
 ### Layout (game screen, portrait)
 
@@ -437,7 +462,7 @@ Block colors (same in both themes; slightly lift brightness in dark):
 │   │                   │   │
 │   └───────────────────┘   │
 │                           │
-│  [hold]  [p1] [p2] [p3]   │  tray at 55% scale, thumb zone
+│  [hold]  [p1] [p2] [p3]   │  tray at 55%, or smaller if the piece would not fit its slot, thumb zone
 └───────────────────────────┘
 ```
 
@@ -458,8 +483,13 @@ These are required and acceptance-tested by hand on a real device.
 - **Lift & offset:** on pickup, the piece scales from 55% to 100% over 120ms (spring) and floats so its bottom edge sits **1 cell height above the touch point**. The finger must never cover the piece.
 - **Ghost preview:** while hovering a valid spot, draw the piece outline at 35% opacity on the snapped position. Lines that would clear get a soft highlight on their cells. An invalid spot shows no ghost.
 - **Drop:** a valid drop snaps in 90ms. An invalid drop springs back to the tray over about 220ms with no haptic.
-- **Clear wave (signature moment):** cleared cells scale to 0 and fade over 220ms, **staggered 18ms per cell by distance from the placed piece's center**, so the clear ripples outward from where you played. Perfect Clear adds one soft full-board pulse.
+- **Clear wave (signature moment):** cleared cells scale to 0 and fade over 220ms, **staggered 18ms per cell by distance from the placed piece's center**, so the clear ripples outward from where you played.
+  - **Glint flash:** before each cell shrinks, a white overlay rises to 0.7 over 50ms, then falls as the cell scales to 0 and fades. *Reduce Motion:* flash only, no stagger.
+  - **Expanding ring:** a stroked ring (3dp, white at 0.35) expands from the placement center to the board diagonal over `maxDelay + 220`ms, fading out and clipped to the board. *Reduce Motion:* no ring.
+  - **Perfect Clear:** a diagonal light sweep (500ms) sweeps across the empty board with a "Clean sweep" label springing in at center. *Reduce Motion:* fade only, no sweep.
+- **Score popup:** floating text (e.g. "+300" in Figtree 600 16 `ink`, Saffron for mono, accent for perfect clear) at the clear centroid, rises 24dp and fades over 600ms. *Reduce Motion:* fade only.
 - **Score ticker:** counts up over 400ms (ease-out). The combo label ("×3") pops in with a spring near the clear and fades after 700ms.
+- **Game-over grey-out:** board tiles grey out row-by-row from top to bottom (60ms/row, tiles lerp to `cellEmpty` over 180ms) before the game over sheet appears. *Reduce Motion:* one 150ms fade.
 - **Reduce Motion:** stagger 0, no pulse, fades only, and durations halved.
 - **Haptics** (via `services/feedback.js`, respecting settings):
 
@@ -517,7 +547,9 @@ Work phase by phase. Finish, test, and commit each before starting the next. Pha
 - Requires a dev build for Apple auth.
 
 **Phase 5 — Release**
-- App icon, splash, store screenshots.
+- App icon: night-slate square (`#0E1218`) holding a 2×2 arrangement inside a debossed well — three glazed tiles (Cobalt top-left, Saffron top-right, Persimmon bottom-left) with sheen and glint, and an empty socket at bottom-right ("the move you're about to make"). Adaptive icon with `#0E1218` background, 1024px PNG for iOS.
+- Splash: `bg` per scheme (`#F4F1EC` / `#0E1218`) with the three-tile mark at 96dp (no text), fading into Home over 300ms matching brand mark placement.
+- Store screenshots (dark): mid-game with glint wave and "×3", Home with Continue card, Adventure trail, Blitz board at 0:09 in `danger`, achievements grid. Short captions in Figtree 600.
 - `eas.json` with a `preview` profile (`android.buildType: "apk"`) and a `production` profile.
 - README (screenshots, build instructions, how to self-host Supabase), LICENSE (MIT), CREDITS.md, and a privacy policy page (GitHub Pages).
 
