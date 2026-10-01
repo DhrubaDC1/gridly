@@ -24,6 +24,7 @@ import ComboLabel from './components/ComboLabel';
 import PauseMenu from './components/PauseMenu';
 import GameOver from './components/GameOver';
 import HandHint from './components/HandHint';
+import Icon from './components/Icon';
 import { getDefaultBoardSize, getBoardMetrics } from './boardLayout';
 import { useGameController } from '../game/useGameController';
 import { adaptPiece, adaptTray } from '../game/adapter';
@@ -328,11 +329,14 @@ export default function GameScreen({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Pause game"
-              hitSlop={8}
+              hitSlop={2}
               onPress={handlePause}
-              style={styles.pauseButton}
+              style={[
+                styles.pauseButton,
+                { backgroundColor: theme.surfaceSunken },
+              ]}
             >
-              <Text style={[styles.pauseText, { color: theme.ink }]}>⏸</Text>
+              <Icon name="pause" size={20} color={theme.ink} />
             </Pressable>
           ),
         }}
@@ -585,13 +589,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   pauseButton: {
-    minWidth: 44,
-    minHeight: 44,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  pauseText: {
-    fontSize: 18,
   },
   timerContainer: {
     flexDirection: 'row',

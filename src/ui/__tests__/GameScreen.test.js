@@ -252,4 +252,43 @@ describe('GameScreen component', () => {
       tree.unmount();
     });
   });
+
+  test('pause button renders 40pt circle in theme.surfaceSunken with Icon "pause" size 20 in theme.ink and 44pt hit area', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(<GameScreen mode="classic" />);
+    });
+
+    const root = tree.root;
+    const { StyleSheet } = require('react-native');
+    const { resolveTheme } = require('../theme');
+    const theme = resolveTheme('light');
+    const Icon = require('../components/Icon').default;
+
+    const stackScreen = root.findByType('StackScreen');
+    const headerRight = stackScreen.props.options.headerRight();
+
+    expect(headerRight.props.accessibilityRole).toBe('button');
+    expect(headerRight.props.accessibilityLabel).toBeDefined();
+
+    // 44pt hit area via hitSlop: 40 + 2 + 2 = 44
+    expect(headerRight.props.hitSlop).toBe(2);
+
+    const flatStyle = StyleSheet.flatten(headerRight.props.style);
+    expect(flatStyle.width).toBe(40);
+    expect(flatStyle.height).toBe(40);
+    expect(flatStyle.borderRadius).toBe(20);
+    expect(flatStyle.backgroundColor).toBe(theme.surfaceSunken);
+
+    // Icon "pause" size 20 in theme.ink
+    const iconElement = headerRight.props.children;
+    expect(iconElement.type).toBe(Icon);
+    expect(iconElement.props.name).toBe('pause');
+    expect(iconElement.props.size).toBe(20);
+    expect(iconElement.props.color).toBe(theme.ink);
+
+    act(() => {
+      tree.unmount();
+    });
+  });
 });

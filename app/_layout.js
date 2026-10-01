@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme } from '../src/ui/theme';
 import Toast from '../src/ui/components/Toast';
+import BackButton from '../src/ui/components/BackButton';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -36,6 +37,8 @@ export default function RootLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: theme.bg },
           headerTintColor: theme.ink,
+          headerTitleAlign: 'center',
+          headerLeft: () => <BackButton />,
           headerTitleStyle: {
             fontFamily: 'Figtree_600SemiBold',
             fontSize: 16,

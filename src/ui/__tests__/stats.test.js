@@ -2,7 +2,6 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import StatsScreen from '../../../app/stats';
 import { useProgress } from '../../store/useProgress';
-import { useRouter } from 'expo-router';
 
 jest.mock('expo-router', () => {
   const pushMock = jest.fn();
@@ -114,49 +113,6 @@ describe('StatsScreen', () => {
 
     expect(texts).toContain('Best day streak');
     expect(texts).toContain('5');
-
-    act(() => {
-      tree.unmount();
-    });
-  });
-
-  test('back button triggers navigation back', () => {
-    let tree;
-    act(() => {
-      tree = renderer.create(<StatsScreen />);
-    });
-
-    const backButton = tree.root.findByProps({ accessibilityLabel: 'Back' });
-    expect(backButton).toBeDefined();
-
-    act(() => {
-      backButton.props.onPress();
-    });
-
-    const router = useRouter();
-    expect(router.back).toHaveBeenCalled();
-
-    act(() => {
-      tree.unmount();
-    });
-  });
-
-  test('back button falls back to replace("/") if canGoBack is false', () => {
-    const router = useRouter();
-    router.canGoBack.mockReturnValueOnce(false);
-
-    let tree;
-    act(() => {
-      tree = renderer.create(<StatsScreen />);
-    });
-
-    const backButton = tree.root.findByProps({ accessibilityLabel: 'Back' });
-
-    act(() => {
-      backButton.props.onPress();
-    });
-
-    expect(router.replace).toHaveBeenCalledWith('/');
 
     act(() => {
       tree.unmount();

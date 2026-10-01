@@ -3,7 +3,6 @@ import renderer, { act } from 'react-test-renderer';
 import AchievementsScreen from '../../../app/achievements';
 import { useProgress } from '../../store/useProgress';
 import { ACHIEVEMENTS } from '../../engine/achievements';
-import { useRouter } from 'expo-router';
 
 jest.mock('expo-router', () => {
   const pushMock = jest.fn();
@@ -110,49 +109,6 @@ describe('AchievementsScreen', () => {
       ? Object.assign({}, ...quadCard.props.style)
       : quadCard.props.style;
     expect(quadFlat.opacity).toBe(0.45);
-
-    act(() => {
-      tree.unmount();
-    });
-  });
-
-  test('back button triggers navigation back', () => {
-    let tree;
-    act(() => {
-      tree = renderer.create(<AchievementsScreen />);
-    });
-
-    const backButton = tree.root.findByProps({ accessibilityLabel: 'Back' });
-    expect(backButton).toBeDefined();
-
-    act(() => {
-      backButton.props.onPress();
-    });
-
-    const router = useRouter();
-    expect(router.back).toHaveBeenCalled();
-
-    act(() => {
-      tree.unmount();
-    });
-  });
-
-  test('back button falls back to replace("/") if canGoBack is false', () => {
-    const router = useRouter();
-    router.canGoBack.mockReturnValueOnce(false);
-
-    let tree;
-    act(() => {
-      tree = renderer.create(<AchievementsScreen />);
-    });
-
-    const backButton = tree.root.findByProps({ accessibilityLabel: 'Back' });
-
-    act(() => {
-      backButton.props.onPress();
-    });
-
-    expect(router.replace).toHaveBeenCalledWith('/');
 
     act(() => {
       tree.unmount();

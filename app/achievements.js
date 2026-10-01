@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, Pressable } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/ui/theme';
 import { useProgress } from '../src/store/useProgress';
@@ -16,7 +16,6 @@ function useSafeInsets() {
 }
 
 export default function AchievementsScreen() {
-  const router = useRouter();
   const theme = useTheme();
   const insets = useSafeInsets();
   const achievements = useProgress((state) => state.achievements);
@@ -31,24 +30,6 @@ export default function AchievementsScreen() {
       <Stack.Screen
         options={{
           title: 'Achievements',
-          headerTitleAlign: 'center',
-          headerLeft: () => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-              hitSlop={8}
-              onPress={() => {
-                if (router.canGoBack?.()) {
-                  router.back();
-                } else {
-                  router.replace('/');
-                }
-              }}
-              style={styles.backButton}
-            >
-              <Text style={[styles.backIcon, { color: theme.ink }]}>‹</Text>
-            </Pressable>
-          ),
         }}
       />
 
@@ -144,17 +125,6 @@ const styles = StyleSheet.create({
     maxWidth: 460,
     width: '100%',
     alignSelf: 'center',
-  },
-  backButton: {
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backIcon: {
-    fontSize: 28,
-    lineHeight: 30,
-    fontFamily: 'Figtree_400Regular',
   },
   header: {
     marginBottom: 20,
