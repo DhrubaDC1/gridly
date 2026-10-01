@@ -94,3 +94,16 @@ Read AGENTS.md sections 6, 7 (adventure save shape), 9 and 10, then read src/ui/
 3. On levelComplete: save stars (keep the maximum per level), best score, unlock the next level, run achievement evaluation with adventureLevel set, and show a result card with the stars earned and buttons "Next level" (dominant), "Replay" and "Map". On failure show "Out of moves" or "No moves left" with "Try again" as the dominant button and "Map" secondary.
 4. Adventure does not save in-progress games.
 5. Tests for the pure parts (goal chip text builder, star saving rule keeping the max, unlock rule).
+
+=== TASK: adventure-levels ===
+Read AGENTS.md section 6 (Adventure), then read assets/levels/levels.json, src/engine/modes/adventure.js, src/engine/generator.js and src/engine/game.js.
+
+Build three scripts that run with plain node (no new packages; if the engine files use ES module syntax, make the scripts .mjs or use whatever works without changing the engine's module style):
+
+1. scripts/bot.js: a greedy bot that plays an adventure level to completion or failure. Each turn it enumerates every legal placement of every tray piece (the hold slot can be ignored) and scores each by: lines cleared (highest weight), gems collected and lock cracks, progress toward the level goals, then penalties for holes (empty cells enclosed by filled cells or walls) and board roughness, and a big penalty for leaving no legal move next turn. It plays the best one with placeAdventure and repeats. Export playLevel(level, seed) returning { won, stars, moves, score }.
+
+2. scripts/verify-levels.js: for each level in a given file (default assets/levels/levels.json), run the bot over 50 seeds and print a table with id, win rate, average moves and average stars, then a final summary. Also run validateLevel and flag problems. Exit non-zero if any level is invalid.
+
+3. scripts/gen-levels.js: keeps levels 1-12 from levels.json unchanged and generates levels 13-50 deterministically from fixed seeds. Difficulty is a function of the level index: prefilled block density rises from about 8% to 35%, gem count from 0 to 8, lock count from 0 to 10, move limits appear from level 15 and tighten, score goals scale. Mix goal types (gems, score, lines) so consecutive levels do not feel identical, and introduce new elements gradually. For each generated level, auto-calibrate: run the bot on 30 seeds and adjust the move limit and score goal (loosen if too hard, tighten if too easy) for up to 6 iterations until the bot win rate lands in the target band for that level, about 85-95% at level 13 sloping down to about 35-55% at level 50. Write the result to assets/levels/levels.json with levels 1-12 untouched. Every level must pass validateLevel, star thresholds must be ascending and reachable (the bot's median score on won runs is at or above the 2-star threshold).
+
+Run gen-levels, then verify-levels, and save the final summary table to docs/LEVELS.md. Add tests that: gen-levels output is deterministic (same output twice), every level validates, levels 1-12 are unchanged, and ids are 1 to 50 consecutive. Keep the test run under 30 seconds (use fewer bot seeds inside tests).
