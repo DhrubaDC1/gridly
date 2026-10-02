@@ -21,7 +21,7 @@ const TIMEOUT_MIN = 40;
 const KEEP_GOING = process.env.KEEP_GOING === '1';
 
 const PREAMBLE = `You are running unattended. Nobody can answer questions, so never ask: make the most reasonable choice and continue.
-Rules: JavaScript only (no TypeScript, except inside supabase/functions). Do not add, remove or upgrade packages, and do not touch package.json or package-lock.json. Follow AGENTS.md. Keep files small. Do not run git commands that change state; the runner commits for you. Never start long-running processes (no expo start, no watch mode, no dev servers); only run one-shot commands such as npm test. Run npm test before finishing. Do not change existing rules inside src/engine unless the task explicitly says so.`;
+Rules: JavaScript only (no TypeScript, except inside supabase/functions). Do not add, remove or upgrade packages, and do not touch package.json or package-lock.json. Follow AGENTS.md. Keep files small. Do not run git commands that change state; the runner commits for you. Never start long-running processes (no expo start, no watch mode, no dev servers); only run one-shot commands such as npm test. Run npm test before finishing. In tests, never pass React test-renderer instances or elements to expect().toBe or toEqual (a failure makes Jest serialize a huge tree and crash with out-of-memory); compare booleans, testIDs or props instead. Do not change existing rules inside src/engine unless the task explicitly says so.`;
 
 const run = (cmd, args, opts = {}) =>
   spawnSync(cmd, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28, ...opts });
