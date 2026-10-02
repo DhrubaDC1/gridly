@@ -86,8 +86,10 @@ jest.mock('react-native-reanimated', () => {
 jest.mock('@shopify/react-native-skia', () => {
   const React = require('react');
   return {
-    Canvas: ({ children, style }) =>
-      React.createElement('Canvas', { style }, children),
+    Canvas: ({ children, style, ...props }) =>
+      React.createElement('Canvas', { style, ...props }, children),
+    Rect: ({ children, ...props }) =>
+      React.createElement('Rect', props, children),
     RoundedRect: ({ children, ...props }) =>
       React.createElement('RoundedRect', props, children),
     Circle: (props) => React.createElement('Circle', props),
@@ -98,7 +100,9 @@ jest.mock('@shopify/react-native-skia', () => {
     Group: ({ children, ...props }) =>
       React.createElement('Group', props, children),
     LinearGradient: (props) => React.createElement('LinearGradient', props),
+    RadialGradient: (props) => React.createElement('RadialGradient', props),
     createPicture: jest.fn(),
+    vec: (x, y) => ({ x, y }),
   };
 });
 
@@ -413,6 +417,21 @@ describe('GameScreen component', () => {
     expect(textStyle.color).toBe(theme.inkMuted);
 
     expect(isDescendantOf(bestChip, 'score-wrapper')).toBe(true);
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('mounts static Backdrop component behind content', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(<GameScreen mode="classic" />);
+    });
+
+    const backdrop = tree.root.findByProps({ testID: 'backdrop' });
+    expect(Boolean(backdrop)).toBe(true);
+    expect(backdrop.props.pointerEvents).toBe('none');
 
     act(() => {
       tree.unmount();

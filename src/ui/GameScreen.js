@@ -25,6 +25,7 @@ import PauseMenu from './components/PauseMenu';
 import GameOver from './components/GameOver';
 import HandHint from './components/HandHint';
 import Icon from './components/Icon';
+import Backdrop from './components/Backdrop';
 import { getDefaultBoardSize, getBoardMetrics } from './boardLayout';
 import { useGameController } from '../game/useGameController';
 import { adaptPiece, adaptTray } from '../game/adapter';
@@ -51,7 +52,7 @@ export default function GameScreen({
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
 
   const {
@@ -95,6 +96,9 @@ export default function GameScreen({
   const slotHeight = 96;
   const trayWidth = 3 * slotWidth + 2 * TRAY_GAP;
   const holdWidth = slotWidth;
+  const paddingBottom = Math.max(insets.bottom, 16) + 16;
+  const boardCenterY =
+    screenHeight - paddingBottom - slotHeight - 20 - boardSize / 2;
 
   // Reanimated timer progress for Blitz
   const timerProgress = useSharedValue(
@@ -312,16 +316,17 @@ export default function GameScreen({
       : 'Classic');
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.bg,
-          paddingBottom: Math.max(insets.bottom, 16) + 16,
-        },
-      ]}
-    >
-      <Stack.Screen
+    <View style={[styles.root, { backgroundColor: theme.bg }]}>
+      <Backdrop boardCenterY={boardCenterY} />
+      <View
+        style={[
+          styles.container,
+          {
+            paddingBottom,
+          },
+        ]}
+      >
+        <Stack.Screen
         options={{
           title: headerTitle,
           headerTitleAlign: 'center',
@@ -594,11 +599,16 @@ export default function GameScreen({
         onMap={handleMap}
         theme={theme}
       />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    position: 'relative',
+  },
   container: {
     flex: 1,
     alignItems: 'center',

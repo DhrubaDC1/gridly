@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/ui/theme';
+import Backdrop from '../src/ui/components/Backdrop';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -9,17 +10,19 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.bg }]}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: Math.max(insets.top, 24) + 24,
-          paddingBottom: Math.max(insets.bottom, 24) + 16,
-        },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={[styles.root, { backgroundColor: theme.bg }]}>
+      <Backdrop />
+      <ScrollView
+        style={[styles.container, { backgroundColor: 'transparent' }]}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top, 24) + 24,
+            paddingBottom: Math.max(insets.bottom, 24) + 16,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.ink }]}>Gridly</Text>
         <Text style={[styles.subtitle, { color: theme.inkMuted }]}>
@@ -179,10 +182,15 @@ export default function HomeScreen() {
         </Pressable>
       </View>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    position: 'relative',
+  },
   container: {
     flex: 1,
   },

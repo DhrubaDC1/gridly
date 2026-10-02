@@ -58,3 +58,44 @@ jest.mock('react-native-reanimated', () => {
     },
   };
 });
+
+jest.mock('@shopify/react-native-skia', () => {
+  const React = require('react');
+  return {
+    Canvas: ({ children, style, testID, pointerEvents, ...props }) =>
+      React.createElement(
+        'Canvas',
+        { style, testID, pointerEvents, ...props },
+        children
+      ),
+    Rect: ({ children, ...props }) =>
+      React.createElement('Rect', props, children),
+    RoundedRect: ({ children, ...props }) =>
+      React.createElement('RoundedRect', props, children),
+    Circle: (props) => React.createElement('Circle', props),
+    Line: (props) => React.createElement('Line', props),
+    Path: (props) => React.createElement('Path', props),
+    Shadow: (props) => React.createElement('Shadow', props),
+    Picture: (props) => React.createElement('Picture', props),
+    Group: ({ children, ...props }) =>
+      React.createElement('Group', props, children),
+    LinearGradient: (props) => React.createElement('LinearGradient', props),
+    RadialGradient: (props) => React.createElement('RadialGradient', props),
+    SweepGradient: (props) => React.createElement('SweepGradient', props),
+    createPicture: jest.fn(),
+    Skia: {
+      Paint: () => ({
+        setColor: jest.fn(),
+        setStrokeWidth: jest.fn(),
+        setStyle: jest.fn(),
+      }),
+      Color: (c) => c,
+      RRectXY: jest.fn(),
+      XYWHRect: jest.fn(),
+      Path: {
+        MakeFromSVGString: jest.fn(() => ({})),
+      },
+    },
+    vec: (x, y) => ({ x, y }),
+  };
+});

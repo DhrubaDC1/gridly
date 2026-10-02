@@ -148,5 +148,20 @@ describe('HomeScreen navigation links', () => {
       lightTree.unmount();
     });
   });
+
+  test('mounts Backdrop component with pointerEvents="none" behind HomeScreen content', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(<HomeScreen />);
+    });
+
+    const backdrop = tree.root.findByProps({ testID: 'backdrop' });
+    expect(Boolean(backdrop)).toBe(true);
+    expect(backdrop.props.pointerEvents).toBe('none');
+
+    act(() => {
+      tree.unmount();
+    });
+  });
 });
 
