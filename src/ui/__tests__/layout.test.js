@@ -12,6 +12,7 @@ jest.mock('@shopify/react-native-skia', () => {
     Path: (props) => React.createElement('Path', props),
     Group: ({ children, ...props }) =>
       React.createElement('Group', props, children),
+    LinearGradient: (props) => React.createElement('LinearGradient', props),
     Skia: {
       Path: {
         MakeFromSVGString: jest.fn(() => ({})),

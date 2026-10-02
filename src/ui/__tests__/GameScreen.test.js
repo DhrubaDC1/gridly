@@ -97,6 +97,7 @@ jest.mock('@shopify/react-native-skia', () => {
     Picture: (props) => React.createElement('Picture', props),
     Group: ({ children, ...props }) =>
       React.createElement('Group', props, children),
+    LinearGradient: (props) => React.createElement('LinearGradient', props),
     createPicture: jest.fn(),
   };
 });

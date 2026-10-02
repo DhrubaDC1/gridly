@@ -11,14 +11,16 @@ import Cell from './Cell';
 
 /**
  * Draws a piece from its cell coordinates at a given cell size with Skia.
+ * Uses Cell component so tray pieces match board glazed tiles.
  *
  * @param {Object} props
- * @param {Array<[number, number] | { r: number, c: number }>} props.cells
+ * @param {Array<[number, number] | { r: number, c: number, color?: number, kind?: string, hp?: number }>} props.cells
  * @param {number | string} props.color
  * @param {number} props.cellSize
  * @param {number} [props.gap=3]
  * @param {boolean} [props.colorblind]
  * @param {boolean} [props.ghost=false]
+ * @param {Object} [props.theme]
  * @param {any} [props.style]
  */
 export default function Piece({
@@ -28,10 +30,11 @@ export default function Piece({
   gap = DEFAULT_CELL_GAP,
   colorblind: colorblindProp,
   ghost = false,
+  theme: themeProp,
   style,
 }) {
-
-  const theme = useTheme();
+  const hookTheme = useTheme();
+  const theme = themeProp || hookTheme;
   const settingsColorblind = useSettings((state) => state.colorblind);
   const isColorblind =
     typeof colorblindProp === 'boolean' ? colorblindProp : settingsColorblind;
@@ -64,7 +67,7 @@ export default function Piece({
             y={y}
             size={cellSize}
             cellRadius={cellRadius}
-            color={color}
+            color={cell.color !== undefined ? cell.color : color}
             kind={cell.kind || 'normal'}
             hp={cell.hp || 1}
             colorblind={isColorblind}
@@ -76,4 +79,3 @@ export default function Piece({
     </Canvas>
   );
 }
-

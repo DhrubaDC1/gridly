@@ -47,12 +47,14 @@ jest.mock('react-native-reanimated', () => {
 jest.mock('@shopify/react-native-skia', () => {
   const React = require('react');
   return {
-    RoundedRect: (props) => React.createElement('RoundedRect', props),
+    RoundedRect: ({ children, ...props }) =>
+      React.createElement('RoundedRect', props, children),
     Circle: (props) => React.createElement('Circle', props),
     Line: (props) => React.createElement('Line', props),
     Path: (props) => React.createElement('Path', props),
     Group: ({ children, ...props }) =>
       React.createElement('Group', props, children),
+    LinearGradient: (props) => React.createElement('LinearGradient', props),
   };
 });
 
