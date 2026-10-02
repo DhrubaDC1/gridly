@@ -88,12 +88,16 @@ jest.mock('@shopify/react-native-skia', () => {
   return {
     Canvas: ({ children, style }) =>
       React.createElement('Canvas', { style }, children),
-    RoundedRect: (props) => React.createElement('RoundedRect', props),
+    RoundedRect: ({ children, ...props }) =>
+      React.createElement('RoundedRect', props, children),
     Circle: (props) => React.createElement('Circle', props),
     Line: (props) => React.createElement('Line', props),
     Path: (props) => React.createElement('Path', props),
+    Shadow: (props) => React.createElement('Shadow', props),
+    Picture: (props) => React.createElement('Picture', props),
     Group: ({ children, ...props }) =>
       React.createElement('Group', props, children),
+    createPicture: jest.fn(),
   };
 });
 

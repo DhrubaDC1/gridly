@@ -5,7 +5,7 @@ export const TOTAL_BOARD_CELLS = 64;
 export const DEFAULT_CELL_GAP = 3;
 export const DEFAULT_BOARD_PADDING = 8;
 export const BASE_CELL_SIZE = 44;
-export const BASE_CELL_RADIUS = 6;
+export const BASE_CELL_RADIUS = 44 * 0.16;
 export const BOARD_RADIUS = 20;
 export const BOARD_MAX_WIDTH = 420;
 
@@ -64,13 +64,41 @@ export function calculateCellSize(
 
 /**
  * Scales cell corner radius proportionally to cell size.
- * Base: 6px radius at 44px cell size.
+ * Formula: cellSize * 0.16 (approx 7 at 44px cell size).
  *
  * @param {number} cellSize
  * @returns {number}
  */
 export function calculateCellRadius(cellSize) {
-  return (cellSize / BASE_CELL_SIZE) * BASE_CELL_RADIUS;
+  return (cellSize ?? BASE_CELL_SIZE) * 0.16;
+}
+
+/**
+ * Calculates line endpoints for a socket's inner deboss lines (top shadow and bottom lip).
+ * Both lines are 1px tall and inset horizontally by the cell corner radius.
+ *
+ * @param {number} x
+ * @param {number} y
+ * @param {number} cellSize
+ * @param {number} cellRadius
+ * @returns {{
+ *   topLine: { p1: { x: number, y: number }, p2: { x: number, y: number } },
+ *   bottomLine: { p1: { x: number, y: number }, p2: { x: number, y: number } }
+ * }}
+ */
+export function getSocketLines(x, y, cellSize, cellRadius) {
+  const x1 = x + cellRadius;
+  const x2 = x + cellSize - cellRadius;
+  return {
+    topLine: {
+      p1: { x: x1, y: y + 0.5 },
+      p2: { x: x2, y: y + 0.5 },
+    },
+    bottomLine: {
+      p1: { x: x1, y: y + cellSize - 0.5 },
+      p2: { x: x2, y: y + cellSize - 0.5 },
+    },
+  };
 }
 
 /**

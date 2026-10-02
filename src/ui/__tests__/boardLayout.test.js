@@ -10,6 +10,7 @@ import {
   getDefaultBoardSize,
   calculateCellSize,
   calculateCellRadius,
+  getSocketLines,
   adjustBrightness,
   getCellPosition,
   getCellIndex,
@@ -29,7 +30,7 @@ describe('boardLayout', () => {
     expect(TOTAL_BOARD_CELLS).toBe(64);
     expect(DEFAULT_CELL_GAP).toBe(3);
     expect(BASE_CELL_SIZE).toBe(44);
-    expect(BASE_CELL_RADIUS).toBe(6);
+    expect(BASE_CELL_RADIUS).toBeCloseTo(7.04);
     expect(BOARD_RADIUS).toBe(20);
     expect(BOARD_MAX_WIDTH).toBe(420);
   });
@@ -51,9 +52,17 @@ describe('boardLayout', () => {
   });
 
   test('calculateCellRadius scales proportionally', () => {
-    expect(calculateCellRadius(44)).toBe(6);
-    expect(calculateCellRadius(22)).toBe(3);
-    expect(calculateCellRadius(88)).toBe(12);
+    expect(calculateCellRadius(44)).toBeCloseTo(7.04);
+    expect(calculateCellRadius(22)).toBeCloseTo(3.52);
+    expect(calculateCellRadius(88)).toBeCloseTo(14.08);
+  });
+
+  test('getSocketLines calculates deboss top and bottom lines inset by radius', () => {
+    const { topLine, bottomLine } = getSocketLines(10, 20, 44, 7);
+    expect(topLine.p1).toEqual({ x: 17, y: 20.5 });
+    expect(topLine.p2).toEqual({ x: 47, y: 20.5 });
+    expect(bottomLine.p1).toEqual({ x: 17, y: 63.5 });
+    expect(bottomLine.p2).toEqual({ x: 47, y: 63.5 });
   });
 
   test('adjustBrightness brightens and darkens hex colors', () => {

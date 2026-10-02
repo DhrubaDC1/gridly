@@ -1,5 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Canvas, RoundedRect, Group } from '@shopify/react-native-skia';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  Canvas,
+  RoundedRect,
+  Group,
+  Line,
+  Shadow,
+  Picture,
+  createPicture,
+  Skia,
+} from '@shopify/react-native-skia';
 import {
   useSharedValue,
   useDerivedValue,
@@ -17,6 +26,7 @@ import {
   getDefaultBoardSize,
   getBoardMetrics,
   getCellPosition,
+  getSocketLines,
 } from '../boardLayout';
 import Cell from './Cell';
 
@@ -225,33 +235,156 @@ export default function Board({
     }
   }, [perfectClear, triggerPulse]);
 
+  // Record the well and all 64 sockets once with Skia's createPicture,
+  // memoized on board size and dark mode.
+  //
+  // NOTE on Skia version compatibility:
+  // In @shopify/react-native-skia (v2.13.1), createPicture takes an imperative SkCanvas callback.
+  // Child declarative image filters like <Shadow inner /> on <RoundedRect> are processed by the Skia
+  // JSX reconciler rather than imperative canvas calls (imperative Skia does not expose MakeInnerShadow).
+  // If createPicture is unavailable, throws, or does not behave in this Skia version, we fall back to
+  // plain declarative Skia nodes as required by task T09.
+  const boardPicture = useMemo(() => {
+    if (typeof createPicture !== 'function') {
+      return null;
+    }
+    try {
+      const pic = createPicture(
+        (canvas) => {
+          if (!canvas || typeof canvas.drawRRect !== 'function' || !Skia) {
+            return;
+          }
+
+          // 1. Rounded rectangle well (radius 20)
+          const wellPaint = Skia.Paint();
+          wellPaint.setColor(Skia.Color(theme.well));
+          canvas.drawRRect(
+            Skia.RRectXY(
+              Skia.XYWHRect(0, 0, boardSize, boardSize),
+              BOARD_RADIUS,
+              BOARD_RADIUS
+            ),
+            wellPaint
+          );
+
+          // 2. 64 sockets
+          const cellPaint = Skia.Paint();
+          cellPaint.setColor(Skia.Color(theme.cellEmpty));
+
+          const topPaint = Skia.Paint();
+          topPaint.setColor(Skia.Color(theme.socketTop));
+          topPaint.setStrokeWidth(1);
+
+          const botPaint = Skia.Paint();
+          botPaint.setColor(Skia.Color(theme.socketBottom));
+          botPaint.setStrokeWidth(1);
+
+          for (let i = 0; i < TOTAL_BOARD_CELLS; i++) {
+            const { x, y } = getCellPosition(i, cellSize, padding, gap);
+            canvas.drawRRect(
+              Skia.RRectXY(
+                Skia.XYWHRect(x, y, cellSize, cellSize),
+                cellRadius,
+                cellRadius
+              ),
+              cellPaint
+            );
+            const { topLine, bottomLine } = getSocketLines(
+              x,
+              y,
+              cellSize,
+              cellRadius
+            );
+            canvas.drawLine(
+              topLine.p1.x,
+              topLine.p1.y,
+              topLine.p2.x,
+              topLine.p2.y,
+              topPaint
+            );
+            canvas.drawLine(
+              bottomLine.p1.x,
+              bottomLine.p1.y,
+              bottomLine.p2.x,
+              bottomLine.p2.y,
+              botPaint
+            );
+          }
+        },
+        { x: 0, y: 0, width: boardSize, height: boardSize }
+      );
+      return pic || null;
+    } catch (_err) {
+      return null;
+    }
+  }, [
+    boardSize,
+    theme.isDark,
+    cellSize,
+    cellRadius,
+    padding,
+    gap,
+    theme.well,
+    theme.cellEmpty,
+    theme.socketTop,
+    theme.socketBottom,
+  ]);
+
   return (
     <Canvas style={[{ width: boardSize, height: boardSize }, style]}>
-      {/* 1. Rounded rectangle well (radius 20) */}
-      <RoundedRect
-        x={0}
-        y={0}
-        width={boardSize}
-        height={boardSize}
-        r={BOARD_RADIUS}
-        color={theme.well}
-      />
-
-      {/* 2. 64 empty cell slots */}
-      {Array.from({ length: TOTAL_BOARD_CELLS }).map((_, index) => {
-        const { x, y } = getCellPosition(index, cellSize, padding, gap);
-        return (
+      {/* 1. Well and 64 sockets (single Picture when recorded, otherwise plain nodes fallback) */}
+      {boardPicture ? (
+        <Picture picture={boardPicture} />
+      ) : (
+        <Group>
+          {/* Well: rounded rect (radius 20) with inner Shadow */}
           <RoundedRect
-            key={`slot-${index}`}
-            x={x}
-            y={y}
-            width={cellSize}
-            height={cellSize}
-            r={cellRadius}
-            color={theme.cellEmpty}
-          />
-        );
-      })}
+            x={0}
+            y={0}
+            width={boardSize}
+            height={boardSize}
+            r={BOARD_RADIUS}
+            color={theme.well}
+          >
+            <Shadow dx={0} dy={1.5} blur={3} color={theme.wellShadow} inner />
+          </RoundedRect>
+
+          {/* 64 sockets: empty cell fill + 1px top socketTop + 1px bottom socketBottom */}
+          {Array.from({ length: TOTAL_BOARD_CELLS }).map((_, index) => {
+            const { x, y } = getCellPosition(index, cellSize, padding, gap);
+            const { topLine, bottomLine } = getSocketLines(
+              x,
+              y,
+              cellSize,
+              cellRadius
+            );
+            return (
+              <Group key={`socket-${index}`}>
+                <RoundedRect
+                  x={x}
+                  y={y}
+                  width={cellSize}
+                  height={cellSize}
+                  r={cellRadius}
+                  color={theme.cellEmpty}
+                />
+                <Line
+                  p1={topLine.p1}
+                  p2={topLine.p2}
+                  color={theme.socketTop}
+                  strokeWidth={1}
+                />
+                <Line
+                  p1={bottomLine.p1}
+                  p2={bottomLine.p2}
+                  color={theme.socketBottom}
+                  strokeWidth={1}
+                />
+              </Group>
+            );
+          })}
+        </Group>
+      )}
 
       {/* 3. Filled cells */}
       {board &&
