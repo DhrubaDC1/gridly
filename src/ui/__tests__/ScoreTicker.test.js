@@ -92,5 +92,19 @@ describe('ScoreTicker component', () => {
         tree.unmount();
       });
     });
+
+    test('renders with letterSpacing: -0.5 in default style', () => {
+      let tree;
+      act(() => {
+        tree = renderer.create(<ScoreTicker score={12480} />);
+      });
+      const { StyleSheet } = require('react-native');
+      const json = tree.toJSON();
+      const flatStyle = StyleSheet.flatten(json.props.style);
+      expect(flatStyle.letterSpacing).toBe(-0.5);
+      act(() => {
+        tree.unmount();
+      });
+    });
   });
 });

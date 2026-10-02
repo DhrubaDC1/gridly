@@ -375,181 +375,199 @@ export default function GameScreen({
       )}
 
       {/* Score Section */}
-      <View style={styles.scoreContainer}>
-        <ScoreTicker score={state.score} />
-        {mode === 'adventure' ? (
-          <View style={styles.adventureGoalsContainer} testID="adventure-goals">
-            <View style={styles.goalChipsRow}>
-              {(state.goals || []).map((goal, idx) => {
-                const chipText = buildGoalChipText(goal);
-                return (
+      <View style={styles.scoreWrapper} testID="score-wrapper">
+        <View style={styles.scoreContainer} testID="score-container">
+          <ScoreTicker score={state.score} />
+          {mode === 'adventure' ? (
+            <View style={styles.adventureGoalsContainer} testID="adventure-goals">
+              <View style={styles.goalChipsRow}>
+                {(state.goals || []).map((goal, idx) => {
+                  const chipText = buildGoalChipText(goal);
+                  return (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.goalChip,
+                        {
+                          backgroundColor: goal.completed
+                            ? theme.well
+                            : theme.surface,
+                          borderColor: goal.completed
+                            ? theme.accent
+                            : theme.cellEmpty,
+                        },
+                      ]}
+                      accessibilityRole="text"
+                      accessibilityLabel={chipText}
+                    >
+                      <Text
+                        style={[
+                          styles.goalChipText,
+                          {
+                            color: goal.completed ? theme.accent : theme.ink,
+                            fontFamily: goal.completed
+                              ? 'Figtree_600SemiBold'
+                              : 'Figtree_500Medium',
+                          },
+                        ]}
+                      >
+                        {chipText}
+                      </Text>
+                    </View>
+                  );
+                })}
+                {typeof state.movesLeft === 'number' && (
                   <View
-                    key={idx}
                     style={[
                       styles.goalChip,
                       {
-                        backgroundColor: goal.completed
-                          ? theme.well
-                          : theme.surface,
-                        borderColor: goal.completed
-                          ? theme.accent
-                          : theme.cellEmpty,
+                        backgroundColor: theme.surface,
+                        borderColor:
+                          state.movesLeft <= 3 ? theme.danger : theme.cellEmpty,
                       },
                     ]}
                     accessibilityRole="text"
-                    accessibilityLabel={chipText}
+                    accessibilityLabel={`${state.movesLeft} moves left`}
                   >
                     <Text
                       style={[
                         styles.goalChipText,
                         {
-                          color: goal.completed ? theme.accent : theme.ink,
-                          fontFamily: goal.completed
-                            ? 'Figtree_600SemiBold'
-                            : 'Figtree_500Medium',
+                          color:
+                            state.movesLeft <= 3 ? theme.danger : theme.inkMuted,
+                          fontFamily: 'Figtree_600SemiBold',
                         },
                       ]}
                     >
-                      {chipText}
+                      {`${state.movesLeft} ${
+                        state.movesLeft === 1 ? 'move' : 'moves'
+                      }`}
                     </Text>
                   </View>
-                );
-              })}
-              {typeof state.movesLeft === 'number' && (
-                <View
-                  style={[
-                    styles.goalChip,
-                    {
-                      backgroundColor: theme.surface,
-                      borderColor:
-                        state.movesLeft <= 3 ? theme.danger : theme.cellEmpty,
-                    },
-                  ]}
-                  accessibilityRole="text"
-                  accessibilityLabel={`${state.movesLeft} moves left`}
-                >
-                  <Text
-                    style={[
-                      styles.goalChipText,
-                      {
-                        color:
-                          state.movesLeft <= 3 ? theme.danger : theme.inkMuted,
-                        fontFamily: 'Figtree_600SemiBold',
-                      },
-                    ]}
-                  >
-                    {`${state.movesLeft} ${
-                      state.movesLeft === 1 ? 'move' : 'moves'
-                    }`}
-                  </Text>
-                </View>
-              )}
+                )}
+              </View>
             </View>
-          </View>
-        ) : (
-          <Text style={[styles.bestScore, { color: theme.inkMuted }]}>
-            best {bestScore.toLocaleString()}
-          </Text>
-        )}
-      </View>
-
-      {/* Hero Board - Hidden while paused */}
-      <View
-        onLayout={(e) => setBoardLayout(e.nativeEvent.layout)}
-        style={[
-          styles.boardContainer,
-          {
-            width: boardSize,
-            height: boardSize,
-            opacity: isPaused ? 0 : 1,
-          },
-        ]}
-      >
-        <Board
-          board={state.board}
-          size={boardSize}
-          colorblind={colorblind}
-          clearing={clearing}
-          subscribe={subscribe}
-          onClearingComplete={onClearingComplete}
-        />
-        <ComboLabel subscribe={subscribe} />
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.ghostOverlay, ghostAnimatedStyle]}
-        >
-          {ghostPiece && (
-            <Piece
-              cells={ghostPiece.cells}
-              color={ghostPiece.color}
-              cellSize={metrics.cellSize}
-              ghost
-            />
+          ) : (
+            <View
+              style={[
+                styles.bestChip,
+                { backgroundColor: theme.surfaceSunken },
+              ]}
+              testID="best-chip"
+              accessibilityRole="text"
+              accessibilityLabel={`Best ${bestScore.toLocaleString()}`}
+            >
+              <Icon name="trophy" size={12} color={theme.inkMuted} />
+              <Text style={[styles.bestText, { color: theme.inkMuted }]}>
+                {`Best ${bestScore.toLocaleString()}`}
+              </Text>
+            </View>
           )}
-        </Animated.View>
+        </View>
       </View>
 
-      {/* Bottom Area: Hold Slot to the left of Tray */}
-      <View
-        onLayout={(e) => setBottomRowLayout(e.nativeEvent.layout)}
-        style={[
-          styles.bottomRow,
-          {
-            width: boardSize,
-            opacity: isPaused ? 0 : 1,
-          },
-        ]}
-      >
-        <HoldSlot
-          piece={heldPiece}
-          slotWidth={holdWidth}
-          slotHeight={slotHeight}
-          cellSize={metrics.cellSize}
-          gap={metrics.gap}
-          padding={metrics.padding}
-          boardRef={boardRef}
-          slotBoardOffsetX={holdBoardOffsetX}
-          slotBoardOffsetY={holdBoardOffsetY}
-          ghost={ghostObject}
-          onPlace={handlePlaceHeldPiece}
-          onPickup={handlePickup}
-          canHold={canHold}
-          isHovered={isHoldHovered}
-          reduceMotion={reduceMotion}
+      {/* Bottom Group: Board and Tray */}
+      <View style={styles.bottomGroup} testID="bottom-group">
+        {/* Hero Board - Hidden while paused */}
+        <View
+          testID="board-container"
+          onLayout={(e) => setBoardLayout(e.nativeEvent.layout)}
+          style={[
+            styles.boardContainer,
+            {
+              width: boardSize,
+              height: boardSize,
+              opacity: isPaused ? 0 : 1,
+            },
+          ]}
+        >
+          <Board
+            board={state.board}
+            size={boardSize}
+            colorblind={colorblind}
+            clearing={clearing}
+            subscribe={subscribe}
+            onClearingComplete={onClearingComplete}
+          />
+          <ComboLabel subscribe={subscribe} />
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.ghostOverlay, ghostAnimatedStyle]}
+          >
+            {ghostPiece && (
+              <Piece
+                cells={ghostPiece.cells}
+                color={ghostPiece.color}
+                cellSize={metrics.cellSize}
+                ghost
+              />
+            )}
+          </Animated.View>
+        </View>
+
+        {/* Bottom Area: Hold Slot to the left of Tray */}
+        <View
+          testID="bottom-row"
+          onLayout={(e) => setBottomRowLayout(e.nativeEvent.layout)}
+          style={[
+            styles.bottomRow,
+            {
+              width: boardSize,
+              opacity: isPaused ? 0 : 1,
+            },
+          ]}
+        >
+          <HoldSlot
+            piece={heldPiece}
+            slotWidth={holdWidth}
+            slotHeight={slotHeight}
+            cellSize={metrics.cellSize}
+            gap={metrics.gap}
+            padding={metrics.padding}
+            boardRef={boardRef}
+            slotBoardOffsetX={holdBoardOffsetX}
+            slotBoardOffsetY={holdBoardOffsetY}
+            ghost={ghostObject}
+            onPlace={handlePlaceHeldPiece}
+            onPickup={handlePickup}
+            canHold={canHold}
+            isHovered={isHoldHovered}
+            reduceMotion={reduceMotion}
+            theme={theme}
+          />
+          <Tray
+            pieces={trayPieces}
+            boardSize={boardSize}
+            trayWidth={trayWidth}
+            slotWidth={slotWidth}
+            slotHeight={slotHeight}
+            gap={TRAY_GAP}
+            board={state.board}
+            boardLayout={boardLayout}
+            slotOffsetXs={slotBoardOffsetXs}
+            slotOffsetY={slotBoardOffsetY}
+            slotHoldOffsetXs={slotHoldOffsetXs}
+            slotHoldOffsetY={slotHoldOffsetY}
+            holdWidth={holdWidth}
+            holdHeight={slotHeight}
+            canHold={canHold}
+            isHoldHovered={isHoldHovered}
+            ghost={ghostObject}
+            onPlace={handlePlacePiece}
+            onHold={handleHoldFromTray}
+            onPickup={handlePickup}
+            style={{ opacity: isPaused ? 0 : 1 }}
+          />
+        </View>
+
+        {/* Hand Hint Animation (loops until dragging starts, disappears on drag) */}
+        <HandHint
+          visible={Boolean(showHandHint && hintCoords)}
+          startPos={hintCoords?.startPos}
+          endPos={hintCoords?.endPos}
           theme={theme}
         />
-        <Tray
-          pieces={trayPieces}
-          boardSize={boardSize}
-          trayWidth={trayWidth}
-          slotWidth={slotWidth}
-          slotHeight={slotHeight}
-          gap={TRAY_GAP}
-          board={state.board}
-          boardLayout={boardLayout}
-          slotOffsetXs={slotBoardOffsetXs}
-          slotOffsetY={slotBoardOffsetY}
-          slotHoldOffsetXs={slotHoldOffsetXs}
-          slotHoldOffsetY={slotHoldOffsetY}
-          holdWidth={holdWidth}
-          holdHeight={slotHeight}
-          canHold={canHold}
-          isHoldHovered={isHoldHovered}
-          ghost={ghostObject}
-          onPlace={handlePlacePiece}
-          onHold={handleHoldFromTray}
-          onPickup={handlePickup}
-          style={{ opacity: isPaused ? 0 : 1 }}
-        />
       </View>
-
-      {/* Hand Hint Animation (loops until dragging starts, disappears on drag) */}
-      <HandHint
-        visible={Boolean(showHandHint && hintCoords)}
-        startPos={hintCoords?.startPos}
-        endPos={hintCoords?.endPos}
-        theme={theme}
-      />
 
       {/* Pause Menu Overlay */}
       <PauseMenu
@@ -584,7 +602,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     position: 'relative',
   },
@@ -619,25 +636,43 @@ const styles = StyleSheet.create({
     minWidth: 32,
     textAlign: 'right',
   },
+  scoreWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
   scoreContainer: {
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
   },
   score: {
     fontFamily: 'Unbounded_700Bold',
     fontSize: 56,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
-  bestScore: {
+  bestChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    gap: 6,
+    marginTop: 6,
+  },
+  bestText: {
     fontFamily: 'Figtree_500Medium',
     fontSize: 14,
-    marginTop: 2,
+  },
+  bottomGroup: {
+    alignItems: 'center',
+    gap: 20,
+    overflow: 'visible',
+    position: 'relative',
+    zIndex: 100,
   },
   boardContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 8,
     position: 'relative',
   },
   ghostOverlay: {
@@ -649,7 +684,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginVertical: 8,
     overflow: 'visible',
     position: 'relative',
     zIndex: 100,

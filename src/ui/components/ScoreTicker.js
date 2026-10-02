@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   score: {
     fontFamily: 'Unbounded_700Bold',
     fontSize: 56,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
     textAlign: 'center',
     padding: 0,
     margin: 0,
