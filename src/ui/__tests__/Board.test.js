@@ -14,6 +14,7 @@ jest.mock('react-native-reanimated', () => {
       if (cb) cb(true);
       return toValue;
     },
+    withRepeat: (anim) => anim,
     withSequence: (...animations) => animations[animations.length - 1],
     runOnJS: (fn) => fn,
     Easing: {
@@ -58,6 +59,8 @@ import renderer, { act } from 'react-test-renderer';
 import Board from '../components/Board';
 import Cell from '../components/Cell';
 import { resolveTheme } from '../theme';
+import levelsData from '../../../assets/levels/levels.json';
+import { createAdventureGame } from '../../engine/modes/adventure';
 
 describe('Board component', () => {
   beforeEach(() => {
@@ -274,6 +277,94 @@ describe('Board component', () => {
     });
 
     expect(tree.toJSON()).toBeDefined();
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('acceptance: level 11 shows padlocked tiles, and after a clear shows a crack instead of padlock', () => {
+    const level11 = levelsData.find((l) => l.id === 11);
+    const game = createAdventureGame(level11);
+    const lockCellBefore = game.board.find((c) => c && c.kind === 'lock');
+    expect(Boolean(lockCellBefore)).toBe(true);
+    expect(lockCellBefore.hp).toBe(2);
+
+    let tree;
+    act(() => {
+      tree = renderer.create(<Board board={game.board} size={320} />);
+    });
+
+    const root = tree.root;
+    const cells = root.findAllByType(Cell);
+    const lockCellComp = cells.find((c) => c.props.kind === 'lock');
+    expect(Boolean(lockCellComp)).toBe(true);
+    expect(lockCellComp.props.hp).toBe(2);
+
+    // Lock hp 2 shows padlock icon path in white 0.9 and inset frame
+    const lockPaths = lockCellComp.findAllByType('Path');
+    expect(lockPaths.length).toBeGreaterThanOrEqual(1);
+    expect(lockPaths[0].props.opacity).toBe(0.9);
+
+    const insetFrames = lockCellComp
+      .findAllByType('RoundedRect')
+      .filter((r) => r.props.style === 'stroke');
+    expect(insetFrames.length).toBe(1);
+    expect(insetFrames[0].props.strokeWidth).toBe(2.5);
+
+    // After one clear: lock drops to hp: 1
+    const updatedBoard = game.board.map((cell) => {
+      if (cell && cell.kind === 'lock') {
+        return { ...cell, hp: 1 };
+      }
+      return cell;
+    });
+
+    act(() => {
+      tree.update(<Board board={updatedBoard} size={320} />);
+    });
+
+    const updatedCells = tree.root.findAllByType(Cell);
+    const updatedLockCellComp = updatedCells.find((c) => c.props.kind === 'lock');
+    expect(Boolean(updatedLockCellComp)).toBe(true);
+    expect(updatedLockCellComp.props.hp).toBe(1);
+
+    // Shows crack path instead of padlock
+    const strokeRects = updatedLockCellComp
+      .findAllByType('RoundedRect')
+      .filter((r) => r.props.style === 'stroke');
+    expect(strokeRects.length).toBe(0);
+
+    const crackPaths = updatedLockCellComp.findAllByType('Path');
+    expect(crackPaths.length).toBe(1);
+    expect(crackPaths[0].props.opacity).toBe(0.7);
+    expect(crackPaths[0].props.strokeWidth).toBe(1.5);
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('acceptance: level 10 or 12 shows sparkling gems', () => {
+    const level10 = levelsData.find((l) => l.id === 10);
+    const game = createAdventureGame(level10);
+    const gemCell = game.board.find((c) => c && c.kind === 'gem');
+    expect(Boolean(gemCell)).toBe(true);
+
+    let tree;
+    act(() => {
+      tree = renderer.create(<Board board={game.board} size={320} />);
+    });
+
+    const root = tree.root;
+    const cells = root.findAllByType(Cell);
+    const gemCellComp = cells.find((c) => c.props.kind === 'gem');
+    expect(Boolean(gemCellComp)).toBe(true);
+    expect(Boolean(gemCellComp.props.twinkle)).toBe(true);
+
+    // 4 facet triangles + 1 diamond outline + 1 sparkle = 6 Paths
+    const gemPaths = gemCellComp.findAllByType('Path');
+    expect(gemPaths.length).toBe(6);
 
     act(() => {
       tree.unmount();

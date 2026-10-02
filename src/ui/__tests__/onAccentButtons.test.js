@@ -265,7 +265,7 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
     });
   });
 
-  test('Cell uses theme.ink token for lock cells', () => {
+  test('Cell renders inset frame for lock cells (hp 2)', () => {
     let darkTree;
     act(() => {
       darkTree = renderer.create(
@@ -276,15 +276,15 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
           cellRadius={7}
           color={0}
           kind="lock"
-          hp={1}
+          hp={2}
           theme={darkTheme}
         />
       );
     });
 
     const strokeRect = darkTree.root.findAllByType('RoundedRect').find((r) => r.props.style === 'stroke');
-    expect(strokeRect.props.color).toBe(darkTheme.ink);
-    expect(strokeRect.props.color).toBe('#ECEFF5');
+    expect(strokeRect.props.color).toBe('#E9ECF2');
+    expect(strokeRect.props.opacity).toBe(0.9);
 
     act(() => {
       darkTree.unmount();
@@ -300,15 +300,15 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
           cellRadius={7}
           color={0}
           kind="lock"
-          hp={1}
+          hp={2}
           theme={lightTheme}
         />
       );
     });
 
     const strokeRectLight = lightTree.root.findAllByType('RoundedRect').find((r) => r.props.style === 'stroke');
-    expect(strokeRectLight.props.color).toBe(lightTheme.ink);
-    expect(strokeRectLight.props.color).toBe('#1B1F2A');
+    expect(strokeRectLight.props.color).toBe('#FFFFFF');
+    expect(strokeRectLight.props.opacity).toBe(0.85);
 
     act(() => {
       lightTree.unmount();

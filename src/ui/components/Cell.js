@@ -1,4 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import {
+  useSharedValue,
+  useDerivedValue,
+  withTiming,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
 import {
   RoundedRect,
   Circle,
@@ -7,7 +14,9 @@ import {
   Group,
   LinearGradient,
 } from '@shopify/react-native-skia';
-import { colorblindGlyphs, glazeFx, resolveTheme } from '../theme';
+import { colorblindGlyphs, glazeFx, resolveTheme, mixColors } from '../theme';
+import icons from '../icons';
+import useReduceMotion from '../useReduceMotion';
 
 /**
  * Renders a colorblind accessibility glyph centered at (cx, cy).
@@ -98,7 +107,7 @@ function ColorblindGlyph({ glyph, cx, cy, size, color }) {
 }
 
 /**
- * Pure Skia cell component rendering glazed ceramic tiles.
+ * Pure Skia cell component rendering glazed ceramic tiles, gems, and locks.
  *
  * @param {Object} props
  * @param {number} props.x
@@ -111,6 +120,12 @@ function ColorblindGlyph({ glyph, cx, cy, size, color }) {
  * @param {boolean} [props.colorblind=false]
  * @param {boolean} [props.ghost=false]
  * @param {Object} [props.theme]
+ * @param {number} [props.index] - Board cell index (0..63)
+ * @param {(listener: (events: Array<Object>) => void) => () => void} [props.subscribe]
+ * @param {boolean} [props.reduceMotion]
+ * @param {import('react-native-reanimated').SharedValue<number>} [props.twinkle]
+ * @param {import('react-native-reanimated').SharedValue<number>} [props.crackProgress]
+ * @param {import('react-native-reanimated').SharedValue<number>} [props.shakeX]
  */
 export default function Cell({
   x,
@@ -123,7 +138,107 @@ export default function Cell({
   colorblind = false,
   ghost = false,
   theme,
+  index,
+  subscribe,
+  reduceMotion: reduceMotionProp,
+  twinkle,
+  crackProgress: crackProgressProp,
+  shakeX: shakeXProp,
 }) {
+  const hookReduceMotion = useReduceMotion();
+  const reduceMotion =
+    typeof reduceMotionProp === 'boolean' ? reduceMotionProp : hookReduceMotion;
+
+  // Animation values for lock crack drawing and tile shake
+  const internalCrackProgress = useSharedValue(1);
+  const internalShakeX = useSharedValue(0);
+
+  const crackProgress = crackProgressProp || internalCrackProgress;
+  const shakeX = shakeXProp || internalShakeX;
+
+  const tileTransform =
+    typeof useDerivedValue === 'function'
+      ? useDerivedValue(() => {
+          const sx = typeof shakeX?.value === 'number' ? shakeX.value : 0;
+          return [{ translateX: sx }];
+        })
+      : [{ translateX: typeof shakeX?.value === 'number' ? shakeX.value : 0 }];
+
+  // Listen to engine events for lockCracked
+  useEffect(() => {
+    if (!subscribe || typeof index !== 'number') return;
+    return subscribe((events) => {
+      const isCracked = events.some(
+        (e) => e.type === 'lockCracked' && e.index === index
+      );
+      if (isCracked) {
+        if (reduceMotion) {
+          internalCrackProgress.value = 1;
+          internalShakeX.value = 0;
+        } else {
+          internalCrackProgress.value = 0;
+          if (typeof withTiming === 'function') {
+            internalCrackProgress.value = withTiming(1, {
+              duration: 160,
+              easing: Easing.linear,
+            });
+          } else {
+            internalCrackProgress.value = 1;
+          }
+          if (typeof withSequence === 'function') {
+            internalShakeX.value = withSequence(
+              withTiming(-2, { duration: 30 }),
+              withTiming(2, { duration: 30 }),
+              withTiming(-2, { duration: 30 }),
+              withTiming(0, { duration: 30 })
+            );
+          }
+        }
+      }
+    });
+  }, [subscribe, index, reduceMotion, internalCrackProgress, internalShakeX]);
+
+  // Fallback for props-driven hp change (e.g. In unit tests without subscribe)
+  const prevHpRef = useRef(hp);
+  useEffect(() => {
+    if (prevHpRef.current === 2 && hp === 1 && !subscribe) {
+      if (reduceMotion) {
+        internalCrackProgress.value = 1;
+        internalShakeX.value = 0;
+      } else {
+        internalCrackProgress.value = 0;
+        if (typeof withTiming === 'function') {
+          internalCrackProgress.value = withTiming(1, {
+            duration: 160,
+            easing: Easing.linear,
+          });
+        } else {
+          internalCrackProgress.value = 1;
+        }
+        if (typeof withSequence === 'function') {
+          internalShakeX.value = withSequence(
+            withTiming(-2, { duration: 30 }),
+            withTiming(2, { duration: 30 }),
+            withTiming(-2, { duration: 30 }),
+            withTiming(0, { duration: 30 })
+          );
+        }
+      }
+    }
+    prevHpRef.current = hp;
+  }, [hp, subscribe, reduceMotion, internalCrackProgress, internalShakeX]);
+
+  // Gem sparkle twinkle opacity (mapped 0.3 to 0.9; fixed at 0.6 with reduceMotion)
+  const derivedTwinkleOpacity =
+    typeof useDerivedValue === 'function'
+      ? useDerivedValue(() => {
+          if (reduceMotion || !twinkle) return 0.6;
+          const val = typeof twinkle?.value === 'number' ? twinkle.value : 0;
+          return 0.3 + 0.6 * val;
+        })
+      : 0.6;
+  const sparkleOpacity = reduceMotion || !twinkle ? 0.6 : derivedTwinkleOpacity;
+
   const activeTheme = theme || resolveTheme();
   const isColorNumber = typeof color === 'number';
   const colorIndex = isColorNumber ? ((color % 6) + 6) % 6 : 0;
@@ -134,6 +249,7 @@ export default function Cell({
       top: '#5A88F0',
       edge: '#2448A8',
       glyphInk: 'rgba(255,255,255,0.55)',
+      lockBase: '#647FBC',
     };
 
   const glaze = isColorNumber
@@ -143,6 +259,7 @@ export default function Cell({
         top: color || activeGlaze.top,
         edge: color || activeGlaze.edge,
         glyphInk: activeGlaze.glyphInk,
+        lockBase: color ? mixColors(color, '#8A8F99', 0.5) : activeGlaze.lockBase,
       };
 
   const fx = activeTheme?.glazeFx || glazeFx;
@@ -185,28 +302,36 @@ export default function Cell({
   const cy = y + faceHeight / 2;
   const showSheenAndGlint = s >= 14;
 
-  // Diamond geometry for gem cells
-  const gemD = s * 0.2;
-  const gemPath = `M ${cx} ${cy - gemD} L ${cx + gemD} ${cy} L ${cx} ${
-    cy + gemD
-  } L ${cx - gemD} ${cy} Z`;
-  const gemFacetPath = `M ${cx} ${cy - gemD} L ${cx} ${cy + gemD} M ${
-    cx - gemD
-  } ${cy} L ${cx + gemD} ${cy}`;
+  const isLockHp2 = kind === 'lock' && hp === 2;
+  const isLockHp1 = kind === 'lock' && hp === 1;
 
-  // Border parameters for lock cells
-  const lockBorderWidth = Math.max(2.5, s * 0.075);
-  const lockInset = lockBorderWidth / 2 + 1;
-  const lockColor = theme?.ink ?? (theme?.isDark ? '#ECEFF5' : '#1B1F2A');
+  // Lock hp 2 tile base mixed toward grey using glaze.lockBase
+  const tileBase = isLockHp2 ? glaze.lockBase || glaze.base : glaze.base;
 
-  const innerInset = lockInset + lockBorderWidth + 2.5;
-  const innerWidth = s - 2 * innerInset;
-  const innerHeight = faceHeight - 2 * innerInset;
+  // Gem geometry: diamond of side s * 0.42 built from 4 facet triangles with 1px outline in glaze.edge
+  const gemSide = s * 0.42;
+  const gemD = gemSide / Math.SQRT2;
+  const sx = cx + gemD * 0.5;
+  const sy = cy - gemD * 0.5;
+  const sparkleSize = s * 0.12;
+  const sr = sparkleSize / 2;
+  const sparklePath = `M ${sx} ${sy - sr} Q ${sx} ${sy} ${sx + sr} ${sy} Q ${sx} ${sy} ${sx} ${sy + sr} Q ${sx} ${sy} ${sx - sr} ${sy} Q ${sx} ${sy} ${sx} ${sy - sr} Z`;
+
+  // Lock hp 2 geometry: inset frame and centered lock icon scaled to s * 0.45
+  const lockSize = s * 0.45;
+  const lockScale = lockSize / 24;
+  const lockX = cx - lockSize / 2;
+  const lockY = cy - lockSize / 2;
+  const frameColor = activeTheme?.isDark ? '#E9ECF2' : '#FFFFFF';
+  const frameOpacity = activeTheme?.isDark ? 0.9 : 0.85;
+
+  // Lock hp 1 geometry: crack path
+  const crackPath = `M ${x + 0.22 * s} ${y + 0.18 * s} L ${x + 0.48 * s} ${y + 0.46 * s} L ${x + 0.40 * s} ${y + 0.62 * s} L ${x + 0.78 * s} ${y + 0.84 * s} M ${x + 0.48 * s} ${y + 0.46 * s} L ${x + 0.70 * s} ${y + 0.36 * s}`;
 
   const glyphName = colorblindGlyphs[colorIndex % 6] || 'dot';
 
   return (
-    <Group>
+    <Group transform={tileTransform}>
       {/* 1. Rounded rect (x, y, s, s) filled with glaze.edge (the bottom lip) */}
       <RoundedRect
         x={x}
@@ -217,7 +342,7 @@ export default function Cell({
         color={glaze.edge}
       />
 
-      {/* 2. Rounded rect (x, y, s, s - e) with a vertical linear gradient from glaze.top to glaze.base */}
+      {/* 2. Rounded rect (x, y, s, s - e) with a vertical linear gradient from glaze.top to tileBase */}
       <RoundedRect
         x={x}
         y={y}
@@ -228,7 +353,7 @@ export default function Cell({
         <LinearGradient
           start={{ x, y }}
           end={{ x, y: y + faceHeight }}
-          colors={[glaze.top, glaze.base]}
+          colors={[glaze.top, tileBase]}
         />
       </RoundedRect>
 
@@ -261,49 +386,105 @@ export default function Cell({
         />
       )}
 
-      {/* Gem cell decoration: small diamond with facets */}
+      {/* Gem: diamond of side s * 0.42 from four facet triangles with 1px outline + 4-point sparkle */}
       {kind === 'gem' && (
         <Group>
-          <Path path={gemPath} color="#FFFFFF" />
+          {/* Top-left facet triangle */}
           <Path
-            path={gemFacetPath}
-            color="rgba(0, 0, 0, 0.18)"
+            path={`M ${cx} ${cy} L ${cx} ${cy - gemD} L ${cx - gemD} ${cy} Z`}
+            color="#FFFFFF"
+            opacity={0.95}
+          />
+          {/* Top-right facet triangle */}
+          <Path
+            path={`M ${cx} ${cy} L ${cx} ${cy - gemD} L ${cx + gemD} ${cy} Z`}
+            color="#FFFFFF"
+            opacity={0.75}
+          />
+          {/* Bottom-right facet triangle */}
+          <Path
+            path={`M ${cx} ${cy} L ${cx + gemD} ${cy} L ${cx} ${cy + gemD} Z`}
+            color="#FFFFFF"
+            opacity={0.55}
+          />
+          {/* Bottom-left facet triangle */}
+          <Path
+            path={`M ${cx} ${cy} L ${cx - gemD} ${cy} L ${cx} ${cy + gemD} Z`}
+            color="#FFFFFF"
+            opacity={0.80}
+          />
+          {/* 1px outline in glaze.edge */}
+          <Path
+            path={`M ${cx} ${cy - gemD} L ${cx + gemD} ${cy} L ${cx} ${cy + gemD} L ${cx - gemD} ${cy} Z`}
+            color={glaze.edge}
             style="stroke"
             strokeWidth={1}
+            strokeCap="round"
+            strokeJoin="round"
+          />
+          {/* 4-point sparkle at diamond's top right */}
+          <Path
+            path={sparklePath}
+            color="#FFFFFF"
+            opacity={sparkleOpacity}
           />
         </Group>
       )}
 
-      {/* Lock cell decoration: thick border and second ring for hp: 2 */}
-      {kind === 'lock' && (
+      {/* Lock hp 2: inset frame and centered lock icon */}
+      {isLockHp2 && (
         <Group>
           <RoundedRect
-            x={x + lockInset}
-            y={y + lockInset}
-            width={s - 2 * lockInset}
-            height={faceHeight - 2 * lockInset}
-            r={Math.max(2, r - lockInset)}
-            color={lockColor}
+            x={x + 2}
+            y={y + 2}
+            width={s - 4}
+            height={faceHeight - 4}
+            r={Math.max(2, r - 2)}
+            color={frameColor}
+            opacity={frameOpacity}
             style="stroke"
-            strokeWidth={lockBorderWidth}
+            strokeWidth={2.5}
           />
-          {hp === 2 && innerWidth > 4 && innerHeight > 4 && (
-            <RoundedRect
-              x={x + innerInset}
-              y={y + innerInset}
-              width={innerWidth}
-              height={innerHeight}
-              r={Math.max(1.5, r - innerInset)}
-              color={lockColor}
-              style="stroke"
-              strokeWidth={Math.max(1.5, lockBorderWidth * 0.65)}
-            />
-          )}
+          <Group
+            transform={[
+              { translateX: lockX },
+              { translateY: lockY },
+              { scale: lockScale },
+            ]}
+          >
+            {(icons.lock || []).map((p, idx) => (
+              <Path
+                key={`lock-path-${idx}`}
+                path={p}
+                color="#FFFFFF"
+                opacity={0.9}
+                style="stroke"
+                strokeWidth={2}
+                strokeCap="round"
+                strokeJoin="round"
+              />
+            ))}
+          </Group>
         </Group>
+      )}
+
+      {/* Lock hp 1: crack path with animate-on end */}
+      {isLockHp1 && (
+        <Path
+          path={crackPath}
+          color="#FFFFFF"
+          opacity={0.7}
+          style="stroke"
+          strokeWidth={1.5}
+          strokeCap="round"
+          strokeJoin="round"
+          start={0}
+          end={crackProgress}
+        />
       )}
 
       {/* Colorblind glyph drawn in glaze.glyphInk */}
-      {colorblind && kind !== 'gem' && (
+      {colorblind && kind !== 'gem' && !isLockHp2 && (
         <ColorblindGlyph
           glyph={glyphName}
           cx={cx}

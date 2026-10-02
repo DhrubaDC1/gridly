@@ -30,3 +30,31 @@ jest.mock('expo-haptics', () => ({
   },
 }));
 
+jest.mock('react-native-reanimated', () => {
+  const React = require('react');
+  const View = require('react-native').View;
+  return {
+    __esModule: true,
+    default: {
+      View: (props) => React.createElement(View, props),
+    },
+    useSharedValue: (init) => ({ value: init }),
+    useDerivedValue: (fn) => ({ value: fn() }),
+    useAnimatedStyle: (fn) => fn(),
+    withTiming: (toValue, _config, cb) => {
+      if (cb) cb(true);
+      return toValue;
+    },
+    withRepeat: (anim) => anim,
+    withSequence: (...animations) => animations[animations.length - 1],
+    runOnJS: (fn) => fn,
+    Easing: {
+      linear: (t) => t,
+      out: (fn) => fn,
+      in: (fn) => fn,
+      quad: (t) => t,
+      inOut: (fn) => fn,
+      ease: (t) => t,
+    },
+  };
+});

@@ -518,6 +518,44 @@ describe('createGameController', () => {
       expect(controller.state.score).toBe(0);
       expect(controller.state.over).toBe(false);
     });
+
+    test('emits lockCracked event to subscribers when a lock cell cracks from hp 2 to 1', () => {
+      const customBoard = Array(64).fill(null);
+      customBoard[0] = { color: 0, kind: 'lock', hp: 2 };
+      for (let c = 1; c < 7; c++) {
+        customBoard[c] = { color: 1, kind: 'normal', hp: 1 };
+      }
+
+      const customTray = [
+        { id: 'line_1x1', cells: [[0, 0]], color: 2 },
+        null,
+        null,
+      ];
+
+      const controller = createGameController({
+        mode: 'classic',
+        seed: 123,
+        initial: { board: customBoard, tray: customTray },
+        persist: false,
+      });
+
+      const eventsReceived = [];
+      const unsubscribe = controller.subscribe((events) => {
+        eventsReceived.push(...events);
+      });
+
+      const placed = controller.place(0, 0, 7);
+      expect(placed).toBe(true);
+
+      expect(controller.state.board[0].kind).toBe('lock');
+      expect(controller.state.board[0].hp).toBe(1);
+
+      const lockCrackedEvent = eventsReceived.find((e) => e.type === 'lockCracked');
+      expect(Boolean(lockCrackedEvent)).toBe(true);
+      expect(lockCrackedEvent.index).toBe(0);
+
+      unsubscribe();
+    });
   });
 });
 

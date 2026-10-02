@@ -267,20 +267,113 @@ describe('Cell component', () => {
     });
   });
 
-  test('uses theme.ink token for lock cell border and inner ring (light and dark mode)', () => {
+  test('renders gem cell with four facet triangles, outline in glaze.edge, and sparkle driven by twinkle', () => {
+    const theme = resolveTheme('light', 'light');
+    const s = 44;
+    const mockTwinkle = { value: 0.5 };
+
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <Cell
+          x={10}
+          y={20}
+          size={s}
+          color={1} // Jade
+          kind="gem"
+          twinkle={mockTwinkle}
+          theme={theme}
+        />
+      );
+    });
+
+    const root = tree.root;
+    // 4 facet triangles + 1 diamond outline + 1 sparkle = 6 Paths
+    const paths = root.findAllByType('Path');
+    expect(paths.length).toBe(6);
+
+    // Facet triangles
+    const tlFacet = paths[0];
+    expect(tlFacet.props.color).toBe('#FFFFFF');
+    expect(tlFacet.props.opacity).toBe(0.95);
+
+    const trFacet = paths[1];
+    expect(trFacet.props.color).toBe('#FFFFFF');
+    expect(trFacet.props.opacity).toBe(0.75);
+
+    const brFacet = paths[2];
+    expect(brFacet.props.color).toBe('#FFFFFF');
+    expect(brFacet.props.opacity).toBe(0.55);
+
+    const blFacet = paths[3];
+    expect(blFacet.props.color).toBe('#FFFFFF');
+    expect(blFacet.props.opacity).toBe(0.80);
+
+    // Diamond outline in glaze.edge
+    const outline = paths[4];
+    expect(outline.props.color).toBe(theme.glaze[1].edge);
+    expect(outline.props.style).toBe('stroke');
+    expect(outline.props.strokeWidth).toBe(1);
+
+    // Sparkle path at top-right
+    const sparkle = paths[5];
+    expect(sparkle.props.color).toBe('#FFFFFF');
+    const sparkleOpacityVal =
+      typeof sparkle.props.opacity === 'object'
+        ? sparkle.props.opacity.value
+        : sparkle.props.opacity;
+    expect(sparkleOpacityVal).toBeCloseTo(0.6, 2);
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('gem cell sparkle is fixed at 0.6 with reduceMotion', () => {
+    const theme = resolveTheme('light', 'light');
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <Cell
+          x={0}
+          y={0}
+          size={44}
+          color={0}
+          kind="gem"
+          reduceMotion={true}
+          theme={theme}
+        />
+      );
+    });
+
+    const root = tree.root;
+    const paths = root.findAllByType('Path');
+    const sparkle = paths[5];
+    const opacityVal =
+      typeof sparkle.props.opacity === 'object'
+        ? sparkle.props.opacity.value
+        : sparkle.props.opacity;
+    expect(opacityVal).toBe(0.6);
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('renders Lock hp 2 with lockBase, inset frame, and scaled lock icon in light and dark mode', () => {
     const lightTheme = resolveTheme('light', 'light');
     const darkTheme = resolveTheme('dark', 'dark');
+    const s = 44;
 
-    // Light theme: theme.ink is #1B1F2A
+    // Light mode
     let lightTree;
     act(() => {
       lightTree = renderer.create(
         <Cell
           x={0}
           y={0}
-          size={44}
-          cellRadius={7}
-          color={0}
+          size={s}
+          color={0} // Cobalt
           kind="lock"
           hp={2}
           theme={lightTheme}
@@ -289,28 +382,40 @@ describe('Cell component', () => {
     });
 
     const lightRoot = lightTree.root;
-    const lightLockRects = lightRoot
+    // Layer 2 body gradient has lockBase as base color
+    const gradients = lightRoot.findAllByType('LinearGradient');
+    const bodyGrad = gradients[0];
+    expect(bodyGrad.props.colors[1]).toBe(lightTheme.glaze[0].lockBase);
+
+    // Inset frame: rect inset 2, stroke 2.5, white 0.85 in light
+    const strokeRectsLight = lightRoot
       .findAllByType('RoundedRect')
       .filter((r) => r.props.style === 'stroke');
-    expect(lightLockRects.length).toBe(2);
-    expect(lightLockRects[0].props.color).toBe(lightTheme.ink);
-    expect(lightLockRects[0].props.color).toBe('#1B1F2A');
-    expect(lightLockRects[1].props.color).toBe(lightTheme.ink);
-    expect(lightLockRects[1].props.color).toBe('#1B1F2A');
+    expect(strokeRectsLight.length).toBe(1);
+    expect(strokeRectsLight[0].props.x).toBe(2);
+    expect(strokeRectsLight[0].props.y).toBe(2);
+    expect(strokeRectsLight[0].props.strokeWidth).toBe(2.5);
+    expect(strokeRectsLight[0].props.color).toBe('#FFFFFF');
+    expect(strokeRectsLight[0].props.opacity).toBe(0.85);
+
+    // Padlock icon paths in white 0.9
+    const lockPaths = lightRoot.findAllByType('Path');
+    expect(lockPaths.length).toBeGreaterThanOrEqual(1);
+    expect(lockPaths[0].props.color).toBe('#FFFFFF');
+    expect(lockPaths[0].props.opacity).toBe(0.9);
 
     act(() => {
       lightTree.unmount();
     });
 
-    // Dark theme: theme.ink is #ECEFF5
+    // Dark mode
     let darkTree;
     act(() => {
       darkTree = renderer.create(
         <Cell
           x={0}
           y={0}
-          size={44}
-          cellRadius={7}
+          size={s}
           color={0}
           kind="lock"
           hp={2}
@@ -320,17 +425,104 @@ describe('Cell component', () => {
     });
 
     const darkRoot = darkTree.root;
-    const darkLockRects = darkRoot
+    const strokeRectsDark = darkRoot
       .findAllByType('RoundedRect')
       .filter((r) => r.props.style === 'stroke');
-    expect(darkLockRects.length).toBe(2);
-    expect(darkLockRects[0].props.color).toBe(darkTheme.ink);
-    expect(darkLockRects[0].props.color).toBe('#ECEFF5');
-    expect(darkLockRects[1].props.color).toBe(darkTheme.ink);
-    expect(darkLockRects[1].props.color).toBe('#ECEFF5');
+    expect(strokeRectsDark.length).toBe(1);
+    expect(strokeRectsDark[0].props.color).toBe('#E9ECF2');
+    expect(strokeRectsDark[0].props.opacity).toBe(0.9);
 
     act(() => {
       darkTree.unmount();
+    });
+  });
+
+  test('renders Lock hp 1 with normal glaze tile and crack path (stroke 1.5, white 0.7)', () => {
+    const theme = resolveTheme('light', 'light');
+    const s = 44;
+
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <Cell
+          x={10}
+          y={10}
+          size={s}
+          color={0}
+          kind="lock"
+          hp={1}
+          theme={theme}
+        />
+      );
+    });
+
+    const root = tree.root;
+    // Normal glaze tile uses normal glaze.base, not lockBase
+    const gradients = root.findAllByType('LinearGradient');
+    const bodyGrad = gradients[0];
+    expect(bodyGrad.props.colors[1]).toBe(theme.glaze[0].base);
+
+    // No inset frame
+    const strokeRects = root
+      .findAllByType('RoundedRect')
+      .filter((r) => r.props.style === 'stroke');
+    expect(strokeRects.length).toBe(0);
+
+    // Crack path
+    const paths = root.findAllByType('Path');
+    expect(paths.length).toBe(1);
+    const crack = paths[0];
+    expect(crack.props.strokeWidth).toBe(1.5);
+    expect(crack.props.color).toBe('#FFFFFF');
+    expect(crack.props.opacity).toBe(0.7);
+    expect(crack.props.style).toBe('stroke');
+
+    // Crack path contains specified points
+    expect(crack.props.path).toContain(`${10 + 0.22 * s}`);
+    expect(crack.props.path).toContain(`${10 + 0.48 * s}`);
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('lockCracked event triggers crack animation and tile shake', () => {
+    const theme = resolveTheme('light', 'light');
+    let listener;
+    const mockSubscribe = jest.fn((cb) => {
+      listener = cb;
+      return () => {};
+    });
+
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <Cell
+          x={0}
+          y={0}
+          size={44}
+          color={0}
+          kind="lock"
+          hp={1}
+          index={5}
+          subscribe={mockSubscribe}
+          reduceMotion={false}
+          theme={theme}
+        />
+      );
+    });
+
+    expect(mockSubscribe).toHaveBeenCalled();
+
+    // Trigger lockCracked event for index 5
+    act(() => {
+      listener([{ type: 'lockCracked', index: 5 }]);
+    });
+
+    expect(tree.toJSON()).toBeDefined();
+
+    act(() => {
+      tree.unmount();
     });
   });
 

@@ -13,6 +13,7 @@ import {
   useSharedValue,
   useDerivedValue,
   withTiming,
+  withRepeat,
   withSequence,
   runOnJS,
   Easing,
@@ -44,6 +45,7 @@ function ClearingCell({
   gap,
   theme,
   isColorblind,
+  twinkle,
 }) {
   const { x, y } = getCellPosition(cell.index, cellSize, padding, gap);
   const cx = x + cellSize / 2;
@@ -89,6 +91,8 @@ function ClearingCell({
         hp={cell.hp}
         colorblind={isColorblind}
         theme={theme}
+        twinkle={twinkle}
+        reduceMotion={reduceMotion}
       />
     </Group>
   );
@@ -99,12 +103,14 @@ function ClearingCell({
  */
 function ClearingWaveOverlay({
   clearing,
+  board,
   cellSize,
   cellRadius,
   padding,
   gap,
   theme,
   isColorblind,
+  twinkle,
   reduceMotion,
   onComplete,
 }) {
@@ -143,21 +149,27 @@ function ClearingWaveOverlay({
 
   return (
     <Group>
-      {clearing.cells.map((cell) => (
-        <ClearingCell
-          key={`clearing-${cell.index}`}
-          cell={cell}
-          center={center}
-          waveTime={waveTime}
-          reduceMotion={reduceMotion}
-          cellSize={cellSize}
-          cellRadius={cellRadius}
-          padding={padding}
-          gap={gap}
-          theme={theme}
-          isColorblind={isColorblind}
-        />
-      ))}
+      {clearing.cells
+        .filter(
+          (cell) =>
+            !(board && board[cell.index] && board[cell.index].kind === 'lock')
+        )
+        .map((cell) => (
+          <ClearingCell
+            key={`clearing-${cell.index}`}
+            cell={cell}
+            center={center}
+            waveTime={waveTime}
+            reduceMotion={reduceMotion}
+            cellSize={cellSize}
+            cellRadius={cellRadius}
+            padding={padding}
+            gap={gap}
+            theme={theme}
+            isColorblind={isColorblind}
+            twinkle={twinkle}
+          />
+        ))}
     </Group>
   );
 }
@@ -210,6 +222,22 @@ export default function Board({
 
   // Perfect clear soft pulse overlay
   const pulseOpacity = useSharedValue(0);
+
+  // Board-level shared value for gem sparkle twinkle
+  const twinkle = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      twinkle.value = 0.5;
+      return;
+    }
+    twinkle.value = 0;
+    const anim =
+      typeof withRepeat === 'function'
+        ? withRepeat(withTiming(1, { duration: 1200 }), -1, true)
+        : withTiming(1, { duration: 1200 });
+    twinkle.value = anim;
+  }, [reduceMotion, twinkle]);
 
   const triggerPulse = useCallback(() => {
     if (reduceMotion) return;
@@ -394,6 +422,7 @@ export default function Board({
           return (
             <Cell
               key={`cell-${index}`}
+              index={index}
               x={x}
               y={y}
               size={cellSize}
@@ -403,6 +432,9 @@ export default function Board({
               hp={cell.hp}
               colorblind={isColorblind}
               theme={theme}
+              twinkle={twinkle}
+              reduceMotion={reduceMotion}
+              subscribe={subscribe}
             />
           );
         })}
@@ -411,12 +443,14 @@ export default function Board({
       {activeClearing && (
         <ClearingWaveOverlay
           clearing={activeClearing}
+          board={board}
           cellSize={cellSize}
           cellRadius={cellRadius}
           padding={padding}
           gap={gap}
           theme={theme}
           isColorblind={isColorblind}
+          twinkle={twinkle}
           reduceMotion={reduceMotion}
           onComplete={handleClearingComplete}
         />
