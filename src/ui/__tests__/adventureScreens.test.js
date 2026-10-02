@@ -5,6 +5,7 @@ jest.mock('react-native-safe-area-context', () => ({
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
+let mockSearchParams = { level: '1' };
 
 jest.mock('expo-router', () => {
   const React = require('react');
@@ -14,7 +15,8 @@ jest.mock('expo-router', () => {
       replace: mockReplace,
       back: mockBack,
     }),
-    useLocalSearchParams: () => ({ level: '1' }),
+    useLocalSearchParams: () => mockSearchParams,
+    Redirect: (props) => React.createElement('Redirect', props),
     Stack: {
       Screen: (props) => React.createElement('StackScreen', props),
     },
@@ -96,6 +98,7 @@ import levelsData from '../../../assets/levels/levels.json';
 describe('Adventure Mode UI Screens and Overlays', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSearchParams = { level: '1' };
     useProgress.getState().resetProgress();
   });
 
@@ -168,6 +171,125 @@ describe('Adventure Mode UI Screens and Overlays', () => {
 
       act(() => {
         tree.unmount();
+      });
+    });
+
+    test('redirects to /adventure when deep link points to locked level', () => {
+      mockSearchParams = { level: '15' };
+      useProgress.getState().resetProgress(); // unlocked is 1
+
+      let tree;
+      act(() => {
+        tree = renderer.create(<AdventureLevelScreen />);
+      });
+
+      const redirect = tree.root.findByType('Redirect');
+      expect(redirect.props.href).toBe('/adventure');
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    test('redirects to /adventure when deep link points to nonexistent level', () => {
+      mockSearchParams = { level: '99' };
+      useProgress.getState().unlockAllLevels();
+
+      let tree;
+      act(() => {
+        tree = renderer.create(<AdventureLevelScreen />);
+      });
+
+      const redirect = tree.root.findByType('Redirect');
+      expect(redirect.props.href).toBe('/adventure');
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    test('redirects to /adventure when deep link level param is invalid', () => {
+      mockSearchParams = { level: 'invalid' };
+
+      let tree;
+      act(() => {
+        tree = renderer.create(<AdventureLevelScreen />);
+      });
+
+      const redirect = tree.root.findByType('Redirect');
+      expect(redirect.props.href).toBe('/adventure');
+
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    test('waits for store hydration before rendering; renders null while unhydrated', () => {
+      let finishHydrationCb;
+      const hasHydratedSpy = jest
+        .spyOn(useProgress.persist, 'hasHydrated')
+        .mockReturnValue(false);
+      const onFinishHydrationSpy = jest
+        .spyOn(useProgress.persist, 'onFinishHydration')
+        .mockImplementation((cb) => {
+          finishHydrationCb = cb;
+          return () => {};
+        });
+
+      let tree;
+      act(() => {
+        tree = renderer.create(<AdventureLevelScreen />);
+      });
+
+      // While unhydrated, component must render null
+      expect(tree.toJSON() === null).toBe(true);
+
+      // Now hydration finishes
+      hasHydratedSpy.mockReturnValue(true);
+      act(() => {
+        if (finishHydrationCb) {
+          finishHydrationCb();
+        }
+      });
+
+      // Now hydrated: level 1 renders GameScreen
+      const stackScreen = tree.root.findByType('StackScreen');
+      expect(stackScreen.props.options.title).toBe('Level 1');
+
+      hasHydratedSpy.mockRestore();
+      onFinishHydrationSpy.mockRestore();
+      act(() => {
+        tree.unmount();
+      });
+    });
+
+    test('in dev builds, unlockAllLevels shortcut allows opening previously locked levels', () => {
+      mockSearchParams = { level: '10' };
+      useProgress.getState().resetProgress(); // unlocked is 1
+
+      let tree1;
+      act(() => {
+        tree1 = renderer.create(<AdventureLevelScreen />);
+      });
+      const redirect = tree1.root.findByType('Redirect');
+      expect(redirect.props.href).toBe('/adventure');
+      act(() => {
+        tree1.unmount();
+      });
+
+      // User triggers "Unlock all levels" shortcut
+      act(() => {
+        useProgress.getState().unlockAllLevels();
+      });
+
+      let tree2;
+      act(() => {
+        tree2 = renderer.create(<AdventureLevelScreen />);
+      });
+      const stackScreen = tree2.root.findByType('StackScreen');
+      expect(stackScreen.props.options.title).toBe('Level 10');
+      act(() => {
+        tree2.unmount();
       });
     });
   });

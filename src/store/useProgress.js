@@ -143,3 +143,5 @@ export const useProgress = create(
     }
   )
 );
+
+export { canOpenLevel } from '../game/adventureProgress';

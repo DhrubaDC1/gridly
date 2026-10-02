@@ -1,3 +1,5 @@
+import levelsData from '../../assets/levels/levels.json';
+
 /**
  * Pure helper functions for Adventure mode progress, goals, stars, and unlocking.
  * No React, no Expo, no side-effects, no Date.now(), no Math.random().
@@ -150,4 +152,61 @@ export function calculateAdventureProgress(currentAdventure = {}, update = {}) {
     stars: nextStars,
     best: nextBest,
   };
+}
+
+/**
+ * Determines whether a given level can be opened.
+ * Pure function: no React, no side-effects.
+ *
+ * A level can be opened if:
+ * 1. The levelId is a valid level present in totalLevels (1 <= levelId <= totalLevels)
+ * 2. The levelId is <= unlocked
+ *
+ * @param {number | string} levelId - ID of the level to check
+ * @param {number} [unlocked=1] - Currently unlocked level threshold
+ * @param {number | Array<any>} [totalLevels=levelsData.length] - Total level count or array of level objects
+ * @returns {boolean}
+ */
+export function canOpenLevel(levelId, unlocked = 1, totalLevels = levelsData.length) {
+  const trimmed =
+    typeof levelId === 'string'
+      ? levelId.trim()
+      : typeof levelId === 'number'
+      ? String(levelId)
+      : '';
+
+  if (!/^\d+$/.test(trimmed)) {
+    return false;
+  }
+
+  const id = parseInt(trimmed, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    return false;
+  }
+
+  if (Array.isArray(totalLevels)) {
+    const exists = totalLevels.some((lvl) =>
+      lvl && typeof lvl === 'object' ? lvl.id === id : lvl === id
+    );
+    if (!exists) {
+      return false;
+    }
+  } else if (typeof totalLevels === 'number' && Number.isFinite(totalLevels)) {
+    if (id > totalLevels) {
+      return false;
+    }
+  } else {
+    if (id > levelsData.length) {
+      return false;
+    }
+  }
+
+  const maxUnlocked =
+    typeof unlocked === 'number' && Number.isFinite(unlocked)
+      ? unlocked
+      : typeof unlocked === 'string' && /^\d+$/.test(unlocked.trim())
+      ? parseInt(unlocked.trim(), 10)
+      : 1;
+
+  return id <= maxUnlocked;
 }

@@ -4,6 +4,7 @@ import {
   calculateNextUnlocked,
   calculateNextBest,
   calculateAdventureProgress,
+  canOpenLevel,
 } from '../adventureProgress';
 
 describe('Adventure Progress Pure Helpers', () => {
@@ -276,6 +277,72 @@ describe('Adventure Progress Pure Helpers', () => {
       expect(result.unlocked).toBe(4);
       expect(result.stars[2]).toBe(2);
       expect(result.best[2]).toBe(1800);
+    });
+  });
+
+  describe('canOpenLevel (deep link & level guard pure function)', () => {
+    test('returns true for unlocked levels within total level bounds', () => {
+      expect(canOpenLevel(1, 1, 50)).toBe(true);
+      expect(canOpenLevel(5, 5, 50)).toBe(true);
+      expect(canOpenLevel(3, 5, 50)).toBe(true);
+      expect(canOpenLevel(50, 50, 50)).toBe(true);
+    });
+
+    test('supports string level representations and trimmed whitespace', () => {
+      expect(canOpenLevel('1', 1, 50)).toBe(true);
+      expect(canOpenLevel('5', 10, 50)).toBe(true);
+      expect(canOpenLevel('  12  ', 15, 50)).toBe(true);
+    });
+
+    test('returns false for locked levels (levelId > unlocked)', () => {
+      expect(canOpenLevel(2, 1, 50)).toBe(false);
+      expect(canOpenLevel(10, 5, 50)).toBe(false);
+      expect(canOpenLevel('15', 10, 50)).toBe(false);
+      expect(canOpenLevel(50, 49, 50)).toBe(false);
+    });
+
+    test('returns false for nonexistent levels exceeding total levels', () => {
+      expect(canOpenLevel(51, 51, 50)).toBe(false);
+      expect(canOpenLevel(100, 100, 50)).toBe(false);
+      expect(canOpenLevel(51, 100, 50)).toBe(false);
+      // Defaults to levelsData.length (50)
+      expect(canOpenLevel(51, 100)).toBe(false);
+    });
+
+    test('returns false for non-positive or non-integer level IDs', () => {
+      expect(canOpenLevel(0, 10, 50)).toBe(false);
+      expect(canOpenLevel(-1, 10, 50)).toBe(false);
+      expect(canOpenLevel(1.5, 10, 50)).toBe(false);
+      expect(canOpenLevel('1.5', 10, 50)).toBe(false);
+      expect(canOpenLevel('0', 10, 50)).toBe(false);
+      expect(canOpenLevel('-5', 10, 50)).toBe(false);
+    });
+
+    test('returns false for invalid non-numeric inputs', () => {
+      expect(canOpenLevel('invalid', 10, 50)).toBe(false);
+      expect(canOpenLevel('', 10, 50)).toBe(false);
+      expect(canOpenLevel(null, 10, 50)).toBe(false);
+      expect(canOpenLevel(undefined, 10, 50)).toBe(false);
+      expect(canOpenLevel(NaN, 10, 50)).toBe(false);
+      expect(canOpenLevel({}, 10, 50)).toBe(false);
+    });
+
+    test('handles custom totalLevels as array of level objects', () => {
+      const customLevels = [{ id: 1 }, { id: 2 }, { id: 5 }];
+      expect(canOpenLevel(1, 2, customLevels)).toBe(true);
+      expect(canOpenLevel(2, 2, customLevels)).toBe(true);
+      expect(canOpenLevel(3, 5, customLevels)).toBe(false); // not in array
+      expect(canOpenLevel(5, 2, customLevels)).toBe(false); // locked
+      expect(canOpenLevel(5, 5, customLevels)).toBe(true);
+    });
+
+    test('handles default totalLevels and unlocked parameter fallbacks', () => {
+      // Default totalLevels = levelsData.length, default unlocked = 1
+      expect(canOpenLevel(1)).toBe(true);
+      expect(canOpenLevel(2)).toBe(false);
+      expect(canOpenLevel(1, undefined, 50)).toBe(true);
+      expect(canOpenLevel(2, undefined, 50)).toBe(false);
+      expect(canOpenLevel(1, 0, 50)).toBe(false);
     });
   });
 });
