@@ -26,12 +26,22 @@ import GameOver from './components/GameOver';
 import HandHint from './components/HandHint';
 import Icon from './components/Icon';
 import Backdrop from './components/Backdrop';
-import { getDefaultBoardSize, getBoardMetrics } from './boardLayout';
+import GoalChip from './components/GoalChip';
+import GemFlight from './components/GemFlight';
+import {
+  getDefaultBoardSize,
+  getBoardMetrics,
+  getCellPosition,
+} from './boardLayout';
 import { useGameController } from '../game/useGameController';
 import { adaptPiece, adaptTray } from '../game/adapter';
 import { useProgress } from '../store/useProgress';
 import { useSettings } from '../store/useSettings';
-import { onPickup } from '../services/feedback';
+import {
+  onPickup,
+  onGemCollected,
+  onGoalCompleted,
+} from '../services/feedback';
 import { calculateTimerRatio, getRemainingSeconds } from '../game/timer';
 import { buildGoalChipText } from '../game/adventureProgress';
 import levelsData from '../../assets/levels/levels.json';
@@ -99,6 +109,145 @@ export default function GameScreen({
   const paddingBottom = Math.max(insets.bottom, 16) + 16;
   const boardCenterY =
     screenHeight - paddingBottom - slotHeight - 20 - boardSize / 2;
+
+  // Adventure goal feedback: gems fly from the board into their chip, and the
+  // chip celebrates once its goal is met (after the last gem lands).
+  const rootRef = useRef(null);
+  const boardContainerRef = useRef(null);
+  const gemChipRef = useRef(null);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const metricsRef = useRef(metrics);
+  metricsRef.current = metrics;
+  const [flights, setFlights] = useState([]);
+  const [gemsInFlight, setGemsInFlight] = useState(0);
+  const inFlightRef = useRef(0);
+  const flightIdRef = useRef(0);
+  const pendingGemGoalRef = useRef(null);
+  const [goalFx, setGoalFx] = useState({});
+
+  const bumpGoal = useCallback((index, key) => {
+    setGoalFx((prev) => ({
+      ...prev,
+      [index]: { ...prev[index], [key]: (prev[index]?.[key] ?? 0) + 1 },
+    }));
+  }, []);
+
+  const celebrateGoal = useCallback(
+    (index) => {
+      bumpGoal(index, 'celebrate');
+      // The final goal already gets the level-complete success haptic.
+      if (!stateRef.current.over) onGoalCompleted();
+    },
+    [bumpGoal]
+  );
+
+  const landGems = useCallback(
+    (count) => {
+      inFlightRef.current = Math.max(0, inFlightRef.current - count);
+      setGemsInFlight(inFlightRef.current);
+      if (inFlightRef.current === 0 && pendingGemGoalRef.current !== null) {
+        celebrateGoal(pendingGemGoalRef.current);
+        pendingGemGoalRef.current = null;
+      }
+    },
+    [celebrateGoal]
+  );
+
+  const handleGemArrive = useCallback(
+    (id) => {
+      setFlights((prev) => prev.filter((f) => f.id !== id));
+      const gemGoal = (stateRef.current.goals || []).findIndex(
+        (g) => g.type === 'gems'
+      );
+      if (gemGoal !== -1) bumpGoal(gemGoal, 'bump');
+      onGemCollected();
+      landGems(1);
+    },
+    [bumpGoal, landGems]
+  );
+
+  useEffect(() => {
+    if (mode !== 'adventure') return;
+    const measure = (ref) =>
+      new Promise((resolve) => {
+        if (!ref.current?.measureInWindow) return resolve(null);
+        ref.current.measureInWindow((x, y, w, h) => resolve({ x, y, w, h }));
+      });
+
+    return subscribe((events) => {
+      for (const e of events) {
+        if (e.type === 'goalCompleted' && e.goal !== 'gems') {
+          celebrateGoal(e.index);
+        }
+      }
+      const gemDone = events.find(
+        (e) => e.type === 'goalCompleted' && e.goal === 'gems'
+      );
+      if (gemDone) pendingGemGoalRef.current = gemDone.index;
+
+      const gems = events
+        .filter((e) => e.type === 'gemCollected')
+        .map((e) => e.index);
+      if (gems.length === 0) {
+        landGems(0);
+        return;
+      }
+
+      // Count them in flight now so the chip never shows the new total early.
+      inFlightRef.current += gems.length;
+      setGemsInFlight(inFlightRef.current);
+
+      Promise.all([
+        measure(rootRef),
+        measure(boardContainerRef),
+        measure(gemChipRef),
+      ]).then(([root, board, chip]) => {
+        if (!root || !board || !chip) {
+          onGemCollected();
+          landGems(gems.length);
+          return;
+        }
+        const m = metricsRef.current;
+        const to = {
+          x: chip.x - root.x + chip.w / 2,
+          y: chip.y - root.y + chip.h / 2,
+        };
+        const batch = gems.map((index, order) => {
+          const { x, y } = getCellPosition(index, m.cellSize, m.padding, m.gap);
+          flightIdRef.current += 1;
+          return {
+            id: `gem-${flightIdRef.current}`,
+            order,
+            from: {
+              x: board.x - root.x + x + m.cellSize / 2,
+              y: board.y - root.y + y + m.cellSize / 2,
+            },
+            to,
+          };
+        });
+        setFlights((prev) => [...prev, ...batch]);
+      });
+    });
+  }, [mode, subscribe, celebrateGoal, landGems]);
+
+  // Let the last clear and goal celebration play before the level-complete sheet.
+  const [showGameOver, setShowGameOver] = useState(state.over);
+  useEffect(() => {
+    if (!state.over) {
+      setShowGameOver(false);
+      return;
+    }
+    if (state.overReason !== 'levelComplete') {
+      setShowGameOver(true);
+      return;
+    }
+    const t = setTimeout(
+      () => setShowGameOver(true),
+      reduceMotion ? 400 : 1200
+    );
+    return () => clearTimeout(t);
+  }, [state.over, state.overReason, reduceMotion]);
 
   // Reanimated timer progress for Blitz
   const timerProgress = useSharedValue(
@@ -242,6 +391,10 @@ export default function GameScreen({
   const handleRestart = useCallback(() => {
     resume();
     restart();
+    setFlights([]);
+    inFlightRef.current = 0;
+    setGemsInFlight(0);
+    pendingGemGoalRef.current = null;
   }, [resume, restart]);
 
   const handleQuit = useCallback(() => {
@@ -316,7 +469,7 @@ export default function GameScreen({
       : 'Classic');
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.bg }]}>
+    <View ref={rootRef} style={[styles.root, { backgroundColor: theme.bg }]}>
       <Backdrop boardCenterY={boardCenterY} />
       <View
         style={[
@@ -387,38 +540,25 @@ export default function GameScreen({
             <View style={styles.adventureGoalsContainer} testID="adventure-goals">
               <View style={styles.goalChipsRow}>
                 {(state.goals || []).map((goal, idx) => {
-                  const chipText = buildGoalChipText(goal);
+                  const landing = goal.type === 'gems' ? gemsInFlight : 0;
+                  const shown = landing
+                    ? {
+                        ...goal,
+                        current: Math.max(0, goal.current - landing),
+                        completed: false,
+                      }
+                    : goal;
                   return (
-                    <View
+                    <GoalChip
                       key={idx}
-                      style={[
-                        styles.goalChip,
-                        {
-                          backgroundColor: goal.completed
-                            ? theme.well
-                            : theme.surface,
-                          borderColor: goal.completed
-                            ? theme.accent
-                            : theme.cellEmpty,
-                        },
-                      ]}
-                      accessibilityRole="text"
-                      accessibilityLabel={chipText}
-                    >
-                      <Text
-                        style={[
-                          styles.goalChipText,
-                          {
-                            color: goal.completed ? theme.accent : theme.ink,
-                            fontFamily: goal.completed
-                              ? 'Figtree_600SemiBold'
-                              : 'Figtree_500Medium',
-                          },
-                        ]}
-                      >
-                        {chipText}
-                      </Text>
-                    </View>
+                      ref={goal.type === 'gems' ? gemChipRef : undefined}
+                      text={buildGoalChipText(shown)}
+                      completed={Boolean(shown.completed)}
+                      celebrate={goalFx[idx]?.celebrate}
+                      bump={goalFx[idx]?.bump}
+                      theme={theme}
+                      reduceMotion={reduceMotion}
+                    />
                   );
                 })}
                 {typeof state.movesLeft === 'number' && (
@@ -476,6 +616,8 @@ export default function GameScreen({
         {/* Hero Board - Hidden while paused */}
         <View
           testID="board-container"
+          ref={boardContainerRef}
+          collapsable={false}
           onLayout={(e) => setBoardLayout(e.nativeEvent.layout)}
           style={[
             styles.boardContainer,
@@ -585,7 +727,7 @@ export default function GameScreen({
 
       {/* Game Over Overlay */}
       <GameOver
-        visible={state.over}
+        visible={showGameOver}
         mode={mode}
         overReason={state.overReason}
         score={state.score}
@@ -600,6 +742,12 @@ export default function GameScreen({
         theme={theme}
       />
       </View>
+      <GemFlight
+        flights={flights}
+        onArrive={handleGemArrive}
+        theme={theme}
+        reduceMotion={reduceMotion}
+      />
     </View>
   );
 }
