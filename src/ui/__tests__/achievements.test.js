@@ -59,13 +59,10 @@ describe('AchievementsScreen', () => {
       expect(texts).toContain(ach.description);
     }
 
-    // Verify all 25 cards have dimmed opacity (0.45)
+    // Verify all 25 cards read as locked
     for (const ach of ACHIEVEMENTS) {
       const card = tree.root.findByProps({ testID: `achievement-card-${ach.id}` });
-      const flat = Array.isArray(card.props.style)
-        ? Object.assign({}, ...card.props.style)
-        : card.props.style;
-      expect(flat.opacity).toBe(0.45);
+      expect(card.props.accessibilityLabel).toContain(', locked.');
     }
 
     act(() => {
@@ -73,7 +70,7 @@ describe('AchievementsScreen', () => {
     });
   });
 
-  test('renders unlocked achievements with unlock date and normal opacity', () => {
+  test('renders unlocked achievements with unlock date', () => {
     act(() => {
       useProgress.getState().unlockAchievement('first_clear', '2026-10-01T12:00:00Z');
       useProgress.getState().unlockAchievement('double', '2026-10-02T15:30:00Z');
@@ -91,24 +88,15 @@ describe('AchievementsScreen', () => {
     expect(texts).toContain('Unlocked Oct 1, 2026');
     expect(texts).toContain('Unlocked Oct 2, 2026');
 
-    // Card opacity checks: first_clear and double are opacity 1, others are opacity 0.45
+    // first_clear and double read as unlocked, quad as locked
     const firstClearCard = tree.root.findByProps({ testID: 'achievement-card-first_clear' });
-    const firstClearFlat = Array.isArray(firstClearCard.props.style)
-      ? Object.assign({}, ...firstClearCard.props.style)
-      : firstClearCard.props.style;
-    expect(firstClearFlat.opacity).toBe(1);
+    expect(firstClearCard.props.accessibilityLabel).toContain('unlocked');
 
     const doubleCard = tree.root.findByProps({ testID: 'achievement-card-double' });
-    const doubleFlat = Array.isArray(doubleCard.props.style)
-      ? Object.assign({}, ...doubleCard.props.style)
-      : doubleCard.props.style;
-    expect(doubleFlat.opacity).toBe(1);
+    expect(doubleCard.props.accessibilityLabel).toContain('unlocked');
 
     const quadCard = tree.root.findByProps({ testID: 'achievement-card-quad' });
-    const quadFlat = Array.isArray(quadCard.props.style)
-      ? Object.assign({}, ...quadCard.props.style)
-      : quadCard.props.style;
-    expect(quadFlat.opacity).toBe(0.45);
+    expect(quadCard.props.accessibilityLabel).toContain(', locked.');
 
     act(() => {
       tree.unmount();

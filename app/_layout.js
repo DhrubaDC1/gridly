@@ -70,9 +70,9 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="classic" options={{ title: 'Classic' }} />
         <Stack.Screen name="blitz" options={{ title: 'Blitz' }} />
-        <Stack.Screen name="adventure/index" options={{ title: 'Adventure' }} />
+        <Stack.Screen name="adventure/index" options={{ headerShown: false }} />
         <Stack.Screen name="adventure/[level]" options={{ title: 'Adventure' }} />
-        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
       </Stack>
       <Toast />
     </GestureHandlerRootView>

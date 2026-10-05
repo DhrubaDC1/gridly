@@ -67,6 +67,9 @@ function TabBar({ state, emitter, navigateToTab }) {
   );
 }
 
+// These screens draw their own big-title header
+const BIG_TITLE_TABS = ['index', 'achievements', 'stats'];
+
 export default function TabsLayout() {
   const theme = useTheme();
 
@@ -86,7 +89,9 @@ export default function TabsLayout() {
         <Tabs.Screen
           key={tab.name}
           name={tab.name}
-          options={tab.name === 'index' ? { headerShown: false } : { title: tab.label }}
+          options={
+            BIG_TITLE_TABS.includes(tab.name) ? { headerShown: false } : { title: tab.label }
+          }
         />
       ))}
     </Tabs>

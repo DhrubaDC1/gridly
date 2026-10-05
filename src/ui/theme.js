@@ -15,9 +15,10 @@ export const lightColors = {
   socketBottom: '#E8E2D7', // 1px inner bottom lip
   ink: '#1B1F2A', // 14.6:1 on bg
   inkMuted: '#5C6372', // 5.35:1 on bg, 6.03 on surface, 4.76 on surfaceSunken
-  accent: '#2E52CC', // 5.83:1 on bg
-  onAccent: '#FFFFFF', // 6.57:1 on accent
-  accentSoft: '#DCE3F8',
+  accent: '#3751C8', // 5.87:1 on bg
+  accentInk: '#3751C8', // accent as text/outline on bg
+  onAccent: '#FFFFFF', // 6.62:1 on accent
+  accentSoft: '#DFE3F6',
   danger: '#C8372D', // 4.61:1 on bg
   success: '#1E8A5F',
   star: '#F2B33D',
@@ -39,9 +40,10 @@ export const darkColors = {
   socketBottom: '#222834',
   ink: '#ECEFF5', // 16.3:1
   inkMuted: '#97A1B4', // 7.22:1 on bg, 6.57 on surface
-  accent: '#8EA8FF', // 8.22:1 on bg
-  onAccent: '#0E1218', // 8.22:1 on accent
-  accentSoft: '#1E2740',
+  accent: '#3751C8', // fills only: 2.84:1 on bg, too low for text
+  accentInk: '#8797DE', // accent as text/outline on bg, 6.72:1
+  onAccent: '#FFFFFF', // 6.62:1 on accent
+  accentSoft: '#1F294E',
   danger: '#FF7A6E', // 7.39:1
   success: '#4CD39A',
   star: '#FFC452',

@@ -48,7 +48,7 @@ describe('Tabs layout', () => {
   test('registers the five tab screens, Home without a header', () => {
     expect(mockScreens.map((s) => s.name)).toEqual(NAMES);
     expect(mockScreens[0].options.headerShown).toBe(false);
-    expect(mockScreens.find((s) => s.name === 'stats').options.title).toBe('Stats');
+    expect(mockScreens.find((s) => s.name === 'stats').options.headerShown).toBe(false);
   });
 
   test.each([

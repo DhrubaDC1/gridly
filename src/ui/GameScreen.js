@@ -398,7 +398,7 @@ export default function GameScreen({
                             ? theme.well
                             : theme.surface,
                           borderColor: goal.completed
-                            ? theme.accent
+                            ? theme.accentInk
                             : theme.cellEmpty,
                         },
                       ]}
@@ -409,7 +409,7 @@ export default function GameScreen({
                         style={[
                           styles.goalChipText,
                           {
-                            color: goal.completed ? theme.accent : theme.ink,
+                            color: goal.completed ? theme.accentInk : theme.ink,
                             fontFamily: goal.completed
                               ? 'Figtree_600SemiBold'
                               : 'Figtree_500Medium',

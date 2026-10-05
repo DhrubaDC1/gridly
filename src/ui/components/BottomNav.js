@@ -35,7 +35,7 @@ function NavButton({ item, active, theme, reduceMotion }) {
     transform: [{ scale: 0.6 + 0.4 * on.value }],
   }));
 
-  const color = active ? theme.accent : theme.inkMuted;
+  const color = active ? theme.accentInk : theme.inkMuted;
 
   return (
     <PressableScale
@@ -68,7 +68,7 @@ function NavButton({ item, active, theme, reduceMotion }) {
           <Text style={[styles.soonText, { color: theme.inkMuted }]}>Soon</Text>
         </View>
       ) : active ? (
-        <View style={[styles.dot, { backgroundColor: theme.accent }]} />
+        <View style={[styles.dot, { backgroundColor: theme.accentInk }]} />
       ) : null}
     </PressableScale>
   );

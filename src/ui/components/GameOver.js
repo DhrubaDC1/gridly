@@ -337,7 +337,7 @@ export default function GameOver({
 
             {isNewBest && (
               <Text
-                style={[styles.newBest, { color: theme.accent }]}
+                style={[styles.newBest, { color: theme.accentInk }]}
                 accessibilityRole="text"
                 accessibilityLabel="New best"
                 testID="new-best-label"

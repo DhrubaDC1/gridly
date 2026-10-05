@@ -111,7 +111,7 @@ export default function ComboLabel({
       style={[styles.container, animatedStyle, style]}
     >
       <View style={[styles.badge, { backgroundColor: theme.surface }]}>
-        <Text style={[styles.text, { color: theme.accent }]}>
+        <Text style={[styles.text, { color: theme.accentInk }]}>
           {`x${displayedCount}`}
         </Text>
       </View>

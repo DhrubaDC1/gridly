@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/ui/theme';
 import { useProgress } from '../../src/store/useProgress';
 import StarRow from '../../src/ui/components/StarRow';
+import ScreenHeader from '../../src/ui/components/ScreenHeader';
+import Icon from '../../src/ui/components/Icon';
 import levelsData from '../../assets/levels/levels.json';
 
 /**
@@ -47,18 +49,26 @@ export default function AdventureMapScreen() {
       contentContainerStyle={[
         styles.content,
         {
-          paddingTop: 16,
+          paddingTop: insets.top + 8,
           paddingBottom: Math.max(insets.bottom, 24) + 24,
         },
       ]}
       showsVerticalScrollIndicator={false}
       testID="adventure-map-screen"
     >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.ink }]}>Adventure</Text>
-        <Text style={[styles.subtitle, { color: theme.inkMuted }]}>
-          {`★ ${totalStars} / ${maxPossibleStars} stars`}
-        </Text>
+      <View style={[styles.header, { width: contentWidth }]}>
+        <ScreenHeader
+          title="Adventure"
+          art="adventure"
+          subtitle={
+            <View style={styles.subtitleRow}>
+              <Icon name="star" size={16} color={theme.inkMuted} fill />
+              <Text style={[styles.subtitle, { color: theme.inkMuted }]}>
+                {`${totalStars} / ${maxPossibleStars} stars`}
+              </Text>
+            </View>
+          }
+        />
       </View>
 
       <View
@@ -93,10 +103,10 @@ export default function AdventureMapScreen() {
                 {
                   width: itemWidth,
                   height: itemWidth,
-                  backgroundColor: isLocked ? theme.cellEmpty : theme.surface,
-                  borderColor: isCurrent ? theme.accent : 'transparent',
-                  borderWidth: isCurrent ? 2 : 1,
-                  opacity: isLocked ? 0.35 : pressed ? 0.85 : 1,
+                  backgroundColor: isLocked ? theme.surfaceSunken : theme.surface,
+                  borderColor: isCurrent ? theme.accentInk : 'transparent',
+                  borderWidth: 2,
+                  opacity: pressed ? 0.85 : 1,
                 },
               ]}
               testID={`level-node-${levelId}`}
@@ -105,7 +115,8 @@ export default function AdventureMapScreen() {
                 style={[
                   styles.levelNumber,
                   {
-                    color: isLocked ? theme.inkMuted : theme.ink,
+                    color: theme.ink,
+                    opacity: isLocked ? 0.3 : 1,
                   },
                 ]}
               >
@@ -116,6 +127,7 @@ export default function AdventureMapScreen() {
                 size={11}
                 gap={2}
                 theme={theme}
+                style={isLocked ? styles.lockedStars : null}
               />
             </Pressable>
           );
@@ -134,17 +146,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   header: {
-    alignItems: 'center',
     marginBottom: 20,
   },
-  title: {
-    fontFamily: 'Unbounded_600SemiBold',
-    fontSize: 24,
-    marginBottom: 4,
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   subtitle: {
     fontFamily: 'Figtree_500Medium',
-    fontSize: 14,
+    fontSize: 16,
+  },
+  lockedStars: {
+    opacity: 0.5,
   },
   grid: {
     flexDirection: 'row',
@@ -152,7 +166,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   node: {
-    borderRadius: 16,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
