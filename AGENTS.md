@@ -65,17 +65,19 @@ Not used, on purpose: TypeScript, Redux, styled-components, Lottie, analytics SD
 
 ```
 app/                        # expo-router screens (thin: layout + wiring only)
-  _layout.js                # fonts, theme, gesture root, stack
-  index.js                  # Home
+  _layout.js                # fonts, theme, gesture root, stack, splash hide, music
+  (tabs)/                   # share one BottomNav; URLs unchanged (/, /stats, ...)
+    _layout.js              # Tabs with BottomNav as the custom tab bar
+    index.js                # Home
+    leaderboards.js
+    achievements.js
+    stats.js
+    profile.js              # name, link account, delete account
   classic.js
   blitz.js
   adventure/index.js        # level map
   adventure/[level].js      # play a level
-  leaderboards.js
-  achievements.js
-  stats.js
   settings.js
-  profile.js                # name, link account, delete account
 src/
   engine/                   # PURE JS. No React/Expo imports.
     rng.js                  # mulberry32 seeded RNG
@@ -95,21 +97,25 @@ src/
   ui/
     theme.js                # tokens from §9 (single source)
     components/             # Board, Piece, Tray, HoldSlot, ScoreTicker, ComboLabel,
-                            # Button, Card, Toast, Modal, StarRow
+                            # Button, Card, Toast, Modal, StarRow,
+                            # BrandMark (Home logo), BottomNav, PressableScale
   store/
     useSettings.js
     useProgress.js          # stats, achievements, adventure, in-progress game
   services/
     feedback.js             # haptics + sounds, reads settings
+    music.js                # background loop per screen family, reads settings
     supabase.js
     sync.js                 # cloud save merge
     leaderboard.js          # submit queue + fetch
 assets/
   levels/levels.json
   sounds/                   # CC0 only (e.g. Kenney.nl packs); list sources in CREDITS.md
+  audio/                    # background music: home.mp3, blitz.mp3, adventure.mp3 (credit in CREDITS.md)
 scripts/
   gen-levels.js             # generate candidate levels (seeded)
   verify-levels.js          # greedy bot playtests each level
+  gen-icon.py               # renders icon, adaptive layers, favicon, splash mark (Pillow)
 supabase/
   migrations/001_init.sql
   functions/submit-score/index.ts   # Edge Functions run on Deno; TS allowed ONLY here
@@ -263,7 +269,7 @@ That is 25 total. Names and descriptions live in one table with the ids above. U
 }
 ```
 
-Settings are stored separately in `useSettings`: `{ sound, haptics, theme: 'system'|'light'|'dark', colorblind, reduceMotion: 'system'|'on'|'off' }`.
+Settings are stored separately in `useSettings`: `{ sound, haptics, music, musicVolume: 0-1, theme: 'system'|'light'|'dark', colorblind, reduceMotion: 'system'|'on'|'off', seenOnboarding }`.
 
 ### Accounts, cloud save, leaderboards (phase 4)
 - On first launch, call `supabase.auth.signInAnonymously()` silently. Every player gets cloud save and leaderboards with no sign-in wall.
@@ -505,6 +511,7 @@ These are required and acceptance-tested by hand on a real device.
 | game over | `notificationAsync(Warning)` |
 
 - **Sound:** short, soft, CC0 tones. The clear sound's pitch rises by one step per combo level, capped at 6. Everything is preloaded at startup and stays silent when the device is on silent (iOS: respect silent mode).
+- **Background music** (`services/music.js`, started once in the root layout): one looping track per screen family — `home` (Home, Classic, menus), `blitz`, `adventure` — picked from the route. Switching screens pauses the old track and resumes it on return (no restarts, never two at once). Pauses when the app backgrounds. Music toggle and Low/Medium/High volume live in Settings.
 - **Onboarding:** the first Classic game ever starts from a scripted board where a single obvious drag clears a line within 3 seconds. A single hand-hint animation plays, with no text walls.
 - **Pause** freezes the Blitz timer. The app going to background auto-pauses and saves.
 
