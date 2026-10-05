@@ -564,6 +564,7 @@ Work phase by phase. Finish, test, and commit each before starting the next. Pha
 - Supabase client, anonymous auth, migrations, and Edge Functions.
 - Sync with merge (tested), leaderboard screen with offline queue, and Profile (rename, link email/Apple, delete account).
 - Requires a dev build for Apple auth.
+- Until this ships, the Leaderboards and Profile tabs (`soon: true` in `app/(tabs)/_layout.js`) are hidden from the BottomNav.
 
 **Phase 5 — Release**
 - App icon: night-slate square (`#0E1218`) holding the Home brand mark: the five glazed tiles from `BrandMark` (Jade, Cobalt, Persimmon, Saffron, Iris) at their Home positions and tilts, with lip, sheen and glint. Adaptive icon with `#0E1218` background (cluster inside the 66dp safe circle) plus a monochrome layer, 1024px PNG for iOS. Regenerate with `python3 scripts/gen-icon.py`.
