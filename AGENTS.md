@@ -157,7 +157,7 @@ Screens stay thin. Logic lives in `src/engine`, `src/game`, `src/store`, `src/se
 - One slot. Dragging a tray piece onto the Hold slot stores it. If the slot is occupied, the pieces swap.
 - The held piece can be dragged from the slot onto the board.
 - Hold can be used **once per placement**: after holding or swapping, the player must place a piece before holding again.
-- A held piece does not count toward the "all 3 placed" refill condition. The tray refills when the tray itself is empty.
+- A held piece does not count toward the "all 3 placed" refill condition. The tray refills when the tray itself is empty. This also applies after a hold: holding the last tray piece into an empty slot refills the tray at once.
 
 ### Scoring (`scoring.js`)
 - Placement: **+1 per cell** placed.

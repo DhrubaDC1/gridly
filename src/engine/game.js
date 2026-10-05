@@ -181,17 +181,6 @@ export function holdPiece(state, trayIndex) {
   nextTray[idx] = swappedOut;
   const nextHold = { id: pieceToHold.id, color: pieceToHold.color };
 
-  const nextState = {
-    ...state,
-    tray: nextTray,
-    hold: nextHold,
-    holdUsed: true,
-    stats: {
-      ...state.stats,
-      holdsUsed: (state.stats?.holdsUsed ?? 0) + 1,
-    },
-  };
-
   const events = [
     {
       type: 'held',
@@ -199,6 +188,34 @@ export function holdPiece(state, trayIndex) {
       swappedOut,
     },
   ];
+
+  // Holding the last tray piece into an empty slot empties the tray: refill it
+  // now, same as a placement would (held piece does not count).
+  let nextRngState = state.rngState;
+  if (nextTray.every((p) => p === null)) {
+    const rng = createRngFromState(nextRngState);
+    const generated = generateTray(state.board, state.score, rng);
+    for (let i = 0; i < TRAY_SIZE; i++) {
+      nextTray[i] = { id: generated[i].id, color: generated[i].color };
+    }
+    nextRngState = rng.getState();
+    events.push({
+      type: 'trayRefilled',
+      pieces: nextTray.map((p) => ({ id: p.id, color: p.color })),
+    });
+  }
+
+  const nextState = {
+    ...state,
+    tray: nextTray,
+    hold: nextHold,
+    holdUsed: true,
+    rngState: nextRngState,
+    stats: {
+      ...state.stats,
+      holdsUsed: (state.stats?.holdsUsed ?? 0) + 1,
+    },
+  };
 
   if (isGameOver(nextState)) {
     nextState.over = true;
