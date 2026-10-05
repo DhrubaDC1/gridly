@@ -36,7 +36,8 @@ function TabBar({ state, emitter, navigateToTab }) {
   const insets = useSafeAreaInsets();
   const focused = state.routes[state.index];
 
-  const items = TABS.map((tab) => ({
+  // `soon` tabs (Phase 4 backend) stay registered as routes but are hidden from the bar
+  const items = TABS.filter((tab) => !tab.soon).map((tab) => ({
     ...tab,
     key: tab.name,
     onPress: () => {

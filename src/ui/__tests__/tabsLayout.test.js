@@ -23,6 +23,7 @@ jest.mock('expo-router', () => {
 });
 
 const NAMES = ['index', 'leaderboards', 'achievements', 'stats', 'profile'];
+const VISIBLE = ['index', 'achievements', 'stats'];
 
 function renderTabBar(activeName) {
   const navigateToTab = jest.fn();
@@ -52,10 +53,8 @@ describe('Tabs layout', () => {
   });
 
   test.each([
-    ['View Leaderboards', 'leaderboards'],
     ['View Achievements', 'achievements'],
     ['View Stats', 'stats'],
-    ['View Profile', 'profile'],
     ['Home', 'index'],
   ])('%s navigates to the %s tab', (label, name) => {
     const { bar, navigateToTab, emitter } = renderTabBar('stats');
@@ -69,8 +68,14 @@ describe('Tabs layout', () => {
     else expect(navigateToTab).toHaveBeenCalledWith(`${name}-key`);
   });
 
+  test('hides the Phase 4 tabs from the bar', () => {
+    const { bar } = renderTabBar('index');
+    expect(bar.root.findAllByProps({ accessibilityLabel: 'View Leaderboards' })).toHaveLength(0);
+    expect(bar.root.findAllByProps({ accessibilityLabel: 'View Profile' })).toHaveLength(0);
+  });
+
   test('marks only the focused tab as selected on every tab', () => {
-    for (const name of NAMES) {
+    for (const name of VISIBLE) {
       const { bar } = renderTabBar(name);
       const selected = bar.root
         .findAll((n) => n.props.accessibilityState?.selected === true && n.props.onPress)
