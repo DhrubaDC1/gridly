@@ -223,3 +223,27 @@ describe('clearWave pure helpers', () => {
     });
   });
 });
+
+describe('getClearHapticPattern', () => {
+  const { getClearHapticPattern } = require('../clearWave');
+
+  test('first pulse follows spec: medium for 1-2 lines, heavy for 3+', () => {
+    expect(getClearHapticPattern(1, 1)[0]).toEqual({ at: 0, style: 'medium' });
+    expect(getClearHapticPattern(2, 1)[0]).toEqual({ at: 0, style: 'medium' });
+    expect(getClearHapticPattern(3, 1)[0]).toEqual({ at: 0, style: 'heavy' });
+    expect(getClearHapticPattern(7, 1)[0]).toEqual({ at: 0, style: 'heavy' });
+  });
+
+  test('more lines give a longer rumble, timed in order', () => {
+    const lens = [1, 2, 3, 4].map((l) => getClearHapticPattern(l, 1).length);
+    expect(lens).toEqual([2, 3, 4, 5]);
+    const at = getClearHapticPattern(4, 4).map((p) => p.at);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+
+  test('combo adds rigid snaps, capped at 3', () => {
+    const rigid = (c) =>
+      getClearHapticPattern(1, c).filter((p) => p.style === 'rigid').length;
+    expect([rigid(1), rigid(2), rigid(4), rigid(9)]).toEqual([0, 1, 3, 3]);
+  });
+});

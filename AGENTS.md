@@ -98,7 +98,8 @@ src/
     theme.js                # tokens from §9 (single source)
     components/             # Board, Piece, Tray, HoldSlot, ScoreTicker, ComboLabel,
                             # Button, Card, Toast, Modal, StarRow,
-                            # BrandMark (Home logo), BottomNav, PressableScale
+                            # BrandMark (Home logo), BottomNav, PressableScale,
+                            # GoalChip, GemFlight
   store/
     useSettings.js
     useProgress.js          # stats, achievements, adventure, in-progress game
@@ -156,7 +157,7 @@ Screens stay thin. Logic lives in `src/engine`, `src/game`, `src/store`, `src/se
 - One slot. Dragging a tray piece onto the Hold slot stores it. If the slot is occupied, the pieces swap.
 - The held piece can be dragged from the slot onto the board.
 - Hold can be used **once per placement**: after holding or swapping, the player must place a piece before holding again.
-- A held piece does not count toward the "all 3 placed" refill condition. The tray refills when the tray itself is empty.
+- A held piece does not count toward the "all 3 placed" refill condition. The tray refills when the tray itself is empty. This also applies after a hold: holding the last tray piece into an empty slot refills the tray at once.
 
 ### Scoring (`scoring.js`)
 - Placement: **+1 per cell** placed.
@@ -186,6 +187,7 @@ scored        { delta, total, breakdown }
 trayRefilled  { pieces }
 held          { piece, swappedOut }
 gameOver      { reason: 'noMoves' | 'timeUp' | 'outOfMoves' }
+goalCompleted { index, goal }   // Adventure: a goal flipped to met this placement
 levelComplete { stars }
 achievement   { id }   // emitted by the store layer, not the engine
 ```
@@ -495,9 +497,13 @@ These are required and acceptance-tested by hand on a real device.
 - **Clear wave (signature moment):** cleared cells scale to 0 and fade over 220ms, **staggered 18ms per cell by distance from the placed piece's center**, so the clear ripples outward from where you played.
   - **Glint flash:** before each cell shrinks, a white overlay rises to 0.7 over 50ms, then falls as the cell scales to 0 and fades. *Reduce Motion:* flash only, no stagger.
   - **Expanding ring:** a stroked ring (3dp, white at 0.35) expands from the placement center to the board diagonal over `maxDelay + 220`ms, fading out and clipped to the board. *Reduce Motion:* no ring.
+  - **Line beams:** each cleared row/column flares white (0.35) and collapses to a seam over 320ms. *Reduce Motion:* fade only.
+  - **Shards:** after the glint, each cell bursts into 4 glaze shards that fly away from the placement center with gravity over 420ms. *Reduce Motion:* none.
+  - **Board shake:** 1.5px for one line, +1.5px per extra line (max 6px), decaying over 320ms. *Reduce Motion:* none.
   - **Perfect Clear:** a diagonal light sweep (500ms) sweeps across the empty board with a "Clean sweep" label springing in at center. *Reduce Motion:* fade only, no sweep.
 - **Score popup:** floating text (e.g. "+300" in Figtree 600 16 `ink`, Saffron for mono, accent for perfect clear) at the clear centroid, rises 24dp and fades over 600ms. *Reduce Motion:* fade only.
 - **Score ticker:** counts up over 400ms (ease-out). The combo label ("×3") pops in with a spring near the clear and fades after 700ms.
+- **Adventure goals:** a collected gem arcs from its cell into the gems goal chip (620ms, staggered 90ms); the chip count ticks up and bumps on arrival with a `Rigid` haptic. When a goal is met (`goalCompleted`, after the last gem lands for gems) the chip pops, turns `success`, and throws a ring and sparks with a Success haptic. The level-complete sheet waits 1200ms so this plays. *Reduce Motion:* fades only, sheet waits 400ms.
 - **Game-over grey-out:** board tiles grey out row-by-row from top to bottom (60ms/row, tiles lerp to `cellEmpty` over 180ms) before the game over sheet appears. *Reduce Motion:* one 150ms fade.
 - **Reduce Motion:** stagger 0, no pulse, fades only, and durations halved.
 - **Haptics** (via `services/feedback.js`, respecting settings):
@@ -506,8 +512,11 @@ These are required and acceptance-tested by hand on a real device.
 |---|---|
 | pickup | `selectionAsync` |
 | place | `impactAsync(Light)` |
-| clear 1–2 lines | `impactAsync(Medium)` |
-| clear 3+ lines | `impactAsync(Heavy)` |
+| clear 1–2 lines | `impactAsync(Medium)`, then a fading rumble (55ms steps) |
+| clear 3+ lines | `impactAsync(Heavy)`, then a longer fading rumble |
+| clear on combo ≥ 2 | plus one `Rigid` tick per combo level above 1 (max 3) |
+| gem lands in chip | `impactAsync(Rigid)` |
+| goal met (not the last) | `notificationAsync(Success)` |
 | perfect clear | `notificationAsync(Success)` |
 | achievement | `notificationAsync(Success)` |
 | game over | `notificationAsync(Warning)` |

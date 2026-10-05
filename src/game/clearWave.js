@@ -185,3 +185,37 @@ export function buildClearingDescription(previousState, events) {
     linesCount: clearedEvent.linesCount,
   };
 }
+
+export const CLEAR_HAPTIC_STEP_MS = 55;
+export const COMBO_HAPTIC_STEP_MS = 45;
+
+// First pulse follows §10 (Medium for 1–2 lines, Heavy for 3+); the tail
+// rolls outward with the wave and fades.
+const CLEAR_HAPTIC_TAILS = [
+  ['medium', 'light'],
+  ['medium', 'medium', 'light'],
+  ['heavy', 'medium', 'medium', 'light'],
+  ['heavy', 'heavy', 'medium', 'light', 'light'],
+];
+
+/**
+ * Haptic pattern for a clear: a decaying rumble sized by lines, then one
+ * crisp rigid tick per combo level above 1 (max 3).
+ *
+ * @param {number} [linesCount=1]
+ * @param {number} [combo=1]
+ * @returns {Array<{ at: number, style: 'light' | 'medium' | 'heavy' | 'rigid' }>}
+ */
+export function getClearHapticPattern(linesCount = 1, combo = 1) {
+  const lines = Math.min(Math.max(Math.floor(linesCount) || 1, 1), 4);
+  const pattern = CLEAR_HAPTIC_TAILS[lines - 1].map((style, i) => ({
+    at: i * CLEAR_HAPTIC_STEP_MS,
+    style,
+  }));
+  const snaps = Math.min(Math.max((Math.floor(combo) || 1) - 1, 0), 3);
+  const tailEnd = pattern[pattern.length - 1].at;
+  for (let i = 1; i <= snaps; i++) {
+    pattern.push({ at: tailEnd + i * COMBO_HAPTIC_STEP_MS, style: 'rigid' });
+  }
+  return pattern;
+}

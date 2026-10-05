@@ -443,6 +443,40 @@ describe('Engine: Game Controller (src/engine/game.js)', () => {
   });
 
   describe('Hold slot mechanics', () => {
+    it('refills the tray when holding its last piece into an empty slot', () => {
+      const last = { id: 'line_1x3', color: 2 };
+      const state = createGame({
+        seed: 7,
+        initial: { board: createBoard(), tray: [null, last, null] },
+      });
+
+      const { state: next, events } = holdPiece(state, 1);
+
+      expect(next.hold).toEqual(last);
+      expect(next.tray.every((p) => p !== null)).toBe(true);
+      expect(events.map((e) => e.type)).toEqual(['held', 'trayRefilled']);
+      expect(events[1].pieces).toEqual(next.tray);
+      expect(next.rngState).not.toBe(state.rngState);
+      expect(next.over).toBe(false);
+      // input not mutated
+      expect(state.tray).toEqual([null, last, null]);
+    });
+
+    it('does not refill on a swap that leaves a piece in the tray', () => {
+      const a = { id: 'line_1x1', color: 0 };
+      const b = { id: 'line_1x2', color: 1 };
+      const state = {
+        ...createGame({
+          seed: 7,
+          initial: { board: createBoard(), tray: [null, a, null] },
+        }),
+        hold: b,
+      };
+      const { state: next, events } = holdPiece(state, 1);
+      expect(next.tray).toEqual([null, b, null]);
+      expect(events.some((e) => e.type === 'trayRefilled')).toBe(false);
+    });
+
     it('allows hold once per placement, supports swap, and held piece does not count toward refill', () => {
       const initialState = createGame({ seed: 60 });
       const [p0, p1, p2] = initialState.tray;

@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useSettings } from '../store/useSettings';
+import { getClearHapticPattern } from '../game/clearWave';
 
 const SOUND_FILES = {
   pickup: require('../../assets/sounds/pickup.wav'),
@@ -101,18 +102,50 @@ export function onPlace() {
   }
 }
 
+const IMPACT_STYLES = {
+  light: Haptics.ImpactFeedbackStyle?.Light ?? 'light',
+  medium: Haptics.ImpactFeedbackStyle?.Medium ?? 'medium',
+  heavy: Haptics.ImpactFeedbackStyle?.Heavy ?? 'heavy',
+  rigid: Haptics.ImpactFeedbackStyle?.Rigid ?? 'rigid',
+};
+
+function impact(style) {
+  playHaptic(() => Haptics.impactAsync(IMPACT_STYLES[style]));
+}
+
 export function onClear(linesCount = 1, combo = 1) {
   try {
     const lines = typeof linesCount === 'number' ? linesCount : 1;
-    const style =
-      lines >= 3
-        ? Haptics.ImpactFeedbackStyle?.Heavy ?? 'heavy'
-        : Haptics.ImpactFeedbackStyle?.Medium ?? 'medium';
-    playHaptic(() => Haptics.impactAsync(style));
-
     const comboCount = typeof combo === 'number' ? combo : 1;
+
+    // Rumble that rolls out with the clear wave; bigger clears and combos hit harder.
+    for (const { at, style } of getClearHapticPattern(lines, comboCount)) {
+      if (at === 0) impact(style);
+      else setTimeout(() => impact(style), at);
+    }
+
     const soundIndex = Math.min(Math.max(comboCount, 1), 6);
     playSound(`clear-${soundIndex}`);
+  } catch {
+    // Fail silently
+  }
+}
+
+/** Gem lands in its goal chip. */
+export function onGemCollected() {
+  try {
+    impact('rigid');
+  } catch {
+    // Fail silently
+  }
+}
+
+/** An Adventure goal (gems, score, lines) was just met. */
+export function onGoalCompleted() {
+  try {
+    const type = Haptics.NotificationFeedbackType?.Success ?? 'success';
+    playHaptic(() => Haptics.notificationAsync(type));
+    playSound('achievement');
   } catch {
     // Fail silently
   }

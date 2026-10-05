@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { AppState } from 'react-native';
 import {
   createGame,
@@ -634,10 +634,10 @@ export function useGameController(options = {}) {
     };
   }, [controller]);
 
-  const onClearingComplete = () => {
+  const onClearingComplete = useCallback(() => {
     controller.clearClearing();
     setClearing(null);
-  };
+  }, [controller]);
 
   return {
     state,

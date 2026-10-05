@@ -231,6 +231,14 @@ describe('Adventure Mode Engine', () => {
 
       expect(events.some((e) => e.type === 'gemCollected')).toBe(true);
       expect(events.some((e) => e.type === 'levelComplete')).toBe(true);
+      expect(events.filter((e) => e.type === 'goalCompleted')).toEqual([
+        { type: 'goalCompleted', index: 0, goal: 'gems' },
+      ]);
+      // goalCompleted comes before levelComplete
+      const types = events.map((e) => e.type);
+      expect(types.indexOf('goalCompleted')).toBeLessThan(
+        types.indexOf('levelComplete')
+      );
       expect(nextState.goals[0].current).toBe(1);
       expect(nextState.goals[0].completed).toBe(true);
       expect(nextState.completed).toBe(true);
@@ -361,6 +369,13 @@ describe('Adventure Mode Engine', () => {
       expect(res1.state.goals[1].completed).toBe(false);
       expect(res1.state.completed).toBe(false);
       expect(res1.events.some((e) => e.type === 'levelComplete')).toBe(false);
+      expect(res1.events.filter((e) => e.type === 'goalCompleted')).toEqual([
+        { type: 'goalCompleted', index: 0, goal: 'gems' },
+      ]);
+
+      // Already-completed goals are not announced again
+      const res2 = placeAdventure(res1.state, 1, 7, 7);
+      expect(res2.events.some((e) => e.type === 'goalCompleted')).toBe(false);
     });
   });
 
