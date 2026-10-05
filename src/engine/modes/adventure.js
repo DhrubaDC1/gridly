@@ -373,12 +373,29 @@ export function placeAdventure(state, source, row, col) {
   const allGoalsMet =
     nextGoals.length > 0 && nextGoals.every((g) => g.completed);
 
+  // Announce goals that flipped to completed on this placement (UI celebrates).
+  const goalEvents = [];
+  nextGoals.forEach((goal, index) => {
+    if (goal.completed && !(state.goals || [])[index]?.completed) {
+      goalEvents.push({ type: 'goalCompleted', index, goal: goal.type });
+    }
+  });
+  const overAt = result.events.findIndex((e) => e.type === 'gameOver');
+  const events =
+    overAt === -1
+      ? [...result.events, ...goalEvents]
+      : [
+          ...result.events.slice(0, overAt),
+          ...goalEvents,
+          ...result.events.slice(overAt),
+        ];
+
   // 3. Check level completion
   if (allGoalsMet) {
     const starCount = calculateStars(currentScore, state.starsThresholds);
 
     // Remove any gameOver event that placePiece may have emitted
-    const finalEvents = result.events.filter((e) => e.type !== 'gameOver');
+    const finalEvents = events.filter((e) => e.type !== 'gameOver');
     finalEvents.push({ type: 'levelComplete', stars: starCount });
 
     const nextState = {
@@ -400,7 +417,7 @@ export function placeAdventure(state, source, row, col) {
 
   // 4. Goals not met: check move limit failure (outOfMoves)
   if (newMovesLeft !== null && newMovesLeft <= 0) {
-    const finalEvents = result.events.filter((e) => e.type !== 'gameOver');
+    const finalEvents = events.filter((e) => e.type !== 'gameOver');
     finalEvents.push({ type: 'gameOver', reason: 'outOfMoves' });
 
     const nextState = {
@@ -436,7 +453,7 @@ export function placeAdventure(state, source, row, col) {
       stars: 0,
     };
 
-    return { state: nextState, events: result.events };
+    return { state: nextState, events };
   }
 
   // 6. Game continues
@@ -454,7 +471,7 @@ export function placeAdventure(state, source, row, col) {
     stars: 0,
   };
 
-  return { state: nextState, events: result.events };
+  return { state: nextState, events };
 }
 
 /**

@@ -9,6 +9,7 @@ jest.mock('react-native-reanimated', () => {
       View: (props) => React.createElement(View, props),
     },
     useSharedValue: (init) => ({ value: init }),
+    useAnimatedStyle: (fn) => fn(),
     useDerivedValue: (fn) => ({ value: fn() }),
     withTiming: (toValue, _config, cb) => {
       if (cb) cb(true);
@@ -50,6 +51,7 @@ jest.mock('@shopify/react-native-skia', () => {
       Color: (c) => c,
       RRectXY: (rect, rx, ry) => ({ rect, rx, ry }),
       XYWHRect: (x, y, w, h) => ({ x, y, w, h }),
+      Path: { Make: () => ({ addRRect: jest.fn() }) },
     },
   };
 });
