@@ -70,11 +70,11 @@ jest.mock('@shopify/react-native-skia', () => {
   };
 });
 
-describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is dark and crisp', () => {
+describe('T03 - onAccent acceptance: in dark mode, text on accent buttons is white and crisp', () => {
   const darkTheme = resolveTheme('dark', 'dark');
   const lightTheme = resolveTheme('light', 'light');
 
-  test('"Play Classic" button in dark mode has dark crisp text (#0E1218) and subtitle at 0.8 opacity', () => {
+  test('"Play Classic" button in dark mode has white crisp text (#FFFFFF) and subtitle at 0.8 opacity', () => {
     act(() => {
       useSettings.getState().setTheme('dark');
     });
@@ -91,11 +91,11 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
 
     const titleStyle = StyleSheet.flatten(titleText.props.style);
     expect(titleStyle.color).toBe(darkTheme.onAccent);
-    expect(titleStyle.color).toBe('#0E1218');
+    expect(titleStyle.color).toBe('#FFFFFF');
 
     const subStyle = StyleSheet.flatten(subText.props.style);
     expect(subStyle.color).toBe(darkTheme.onAccent);
-    expect(subStyle.color).toBe('#0E1218');
+    expect(subStyle.color).toBe('#FFFFFF');
     expect(subStyle.opacity).toBe(0.8);
 
     act(() => {
@@ -103,7 +103,7 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
     });
   });
 
-  test('"Resume" button in dark mode has dark crisp text (#0E1218)', () => {
+  test('"Resume" button in dark mode has white crisp text (#FFFFFF)', () => {
     let tree;
     act(() => {
       tree = renderer.create(
@@ -116,14 +116,14 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
     const resumeStyle = StyleSheet.flatten(resumeText.props.style);
 
     expect(resumeStyle.color).toBe(darkTheme.onAccent);
-    expect(resumeStyle.color).toBe('#0E1218');
+    expect(resumeStyle.color).toBe('#FFFFFF');
 
     act(() => {
       tree.unmount();
     });
   });
 
-  test('"Play again" button in dark mode has dark crisp text (#0E1218)', () => {
+  test('"Play again" button in dark mode has white crisp text (#FFFFFF)', () => {
     let tree;
     act(() => {
       tree = renderer.create(
@@ -136,14 +136,14 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
     const playAgainStyle = StyleSheet.flatten(playAgainText.props.style);
 
     expect(playAgainStyle.color).toBe(darkTheme.onAccent);
-    expect(playAgainStyle.color).toBe('#0E1218');
+    expect(playAgainStyle.color).toBe('#FFFFFF');
 
     act(() => {
       tree.unmount();
     });
   });
 
-  test('"Next level" button in dark mode has dark crisp text (#0E1218)', () => {
+  test('"Next level" button in dark mode has white crisp text (#FFFFFF)', () => {
     let tree;
     act(() => {
       tree = renderer.create(
@@ -164,14 +164,14 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
     const nextLevelStyle = StyleSheet.flatten(nextLevelText.props.style);
 
     expect(nextLevelStyle.color).toBe(darkTheme.onAccent);
-    expect(nextLevelStyle.color).toBe('#0E1218');
+    expect(nextLevelStyle.color).toBe('#FFFFFF');
 
     act(() => {
       tree.unmount();
     });
   });
 
-  test('"Try again" button in dark mode has dark crisp text (#0E1218)', () => {
+  test('"Try again" button in dark mode has white crisp text (#FFFFFF)', () => {
     let tree;
     act(() => {
       tree = renderer.create(
@@ -191,14 +191,14 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
     const tryAgainStyle = StyleSheet.flatten(tryAgainText.props.style);
 
     expect(tryAgainStyle.color).toBe(darkTheme.onAccent);
-    expect(tryAgainStyle.color).toBe('#0E1218');
+    expect(tryAgainStyle.color).toBe('#FFFFFF');
 
     act(() => {
       tree.unmount();
     });
   });
 
-  test('Segmented selected option in dark mode has dark crisp text (#0E1218)', () => {
+  test('Segmented selected option in dark mode has white crisp text (#FFFFFF)', () => {
     let tree;
     act(() => {
       tree = renderer.create(
@@ -216,14 +216,14 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
     const textStyle = StyleSheet.flatten(darkText.props.style);
 
     expect(textStyle.color).toBe(darkTheme.onAccent);
-    expect(textStyle.color).toBe('#0E1218');
+    expect(textStyle.color).toBe('#FFFFFF');
 
     act(() => {
       tree.unmount();
     });
   });
 
-  test('HandHint border and inner dot use theme.onAccent (#0E1218 in dark, #FFFFFF in light)', () => {
+  test('HandHint border and inner dot use theme.onAccent (#FFFFFF in both themes)', () => {
     let darkTree;
     act(() => {
       darkTree = renderer.create(
@@ -239,12 +239,12 @@ describe('T03 - onAccent acceptance: in dark mode, text on periwinkle buttons is
     const darkCircle = darkTree.root.findByProps({ testID: 'hand-hint' });
     const darkCircleStyle = StyleSheet.flatten(darkCircle.props.style);
     expect(darkCircleStyle.borderColor).toBe(darkTheme.onAccent);
-    expect(darkCircleStyle.borderColor).toBe('#0E1218');
+    expect(darkCircleStyle.borderColor).toBe('#FFFFFF');
 
     const darkDot = darkTree.root.findByProps({ testID: 'hand-hint-dot' });
     const darkDotStyle = StyleSheet.flatten(darkDot.props.style);
     expect(darkDotStyle.backgroundColor).toBe(darkTheme.onAccent);
-    expect(darkDotStyle.backgroundColor).toBe('#0E1218');
+    expect(darkDotStyle.backgroundColor).toBe('#FFFFFF');
 
     act(() => {
       darkTree.unmount();

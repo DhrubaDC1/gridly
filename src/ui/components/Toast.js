@@ -148,7 +148,7 @@ export default function Toast({
         accessibilityLabel={`${title}: ${message}`}
         testID="toast-card"
       >
-        <Text style={[styles.title, { color: theme.accent }]}>{title}</Text>
+        <Text style={[styles.title, { color: theme.accentInk }]}>{title}</Text>
         {Boolean(message) && (
           <Text style={[styles.message, { color: theme.ink }]}>
             {message}

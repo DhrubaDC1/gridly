@@ -49,7 +49,7 @@ describe('HomeScreen navigation links', () => {
     });
   });
 
-  test('Play Classic button text uses theme.onAccent (dark in dark mode, white in light mode) and subtitle has 0.8 opacity', () => {
+  test('Play Classic button text uses theme.onAccent (white in both themes) and subtitle has 0.8 opacity', () => {
     const { useSettings } = require('../../store/useSettings');
     const { StyleSheet } = require('react-native');
 
@@ -68,10 +68,10 @@ describe('HomeScreen navigation links', () => {
     const subTextDark = textsDark.find((t) => t.props.children === 'Endless relaxing puzzle');
 
     const titleStyleDark = StyleSheet.flatten(titleTextDark.props.style);
-    expect(titleStyleDark.color).toBe('#0E1218');
+    expect(titleStyleDark.color).toBe('#FFFFFF');
 
     const subStyleDark = StyleSheet.flatten(subTextDark.props.style);
-    expect(subStyleDark.color).toBe('#0E1218');
+    expect(subStyleDark.color).toBe('#FFFFFF');
     expect(subStyleDark.opacity).toBe(0.8);
 
     act(() => {

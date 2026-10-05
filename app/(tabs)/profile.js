@@ -12,7 +12,7 @@ export default function ProfileScreen() {
           Keep your progress safe across devices, link email or Apple ID, and
           manage your player name.
         </Text>
-        <Text style={[styles.status, { color: theme.accent }]}>
+        <Text style={[styles.status, { color: theme.accentInk }]}>
           Account linking and cloud sync arriving in Phase 4.
         </Text>
       </View>

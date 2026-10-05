@@ -1,5 +1,12 @@
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 44, bottom: 34, left: 0, right: 0 }),
+}));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), canGoBack: () => true }),
+}));
+
 import React from 'react';
-import { Switch } from 'react-native';
+import Switch from '../components/Toggle';
 import renderer, { act } from 'react-test-renderer';
 import SettingsScreen from '../../../app/settings';
 import { useSettings } from '../../store/useSettings';

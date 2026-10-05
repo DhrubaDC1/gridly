@@ -125,7 +125,7 @@ describe('PauseMenu component', () => {
     expect(flattened.backgroundColor).toBe('rgba(14,18,24,0.55)');
   });
 
-  it('renders Resume button text using theme.onAccent (dark in dark mode, white in light mode)', () => {
+  it('renders Resume button text using theme.onAccent (white in both themes)', () => {
     const { resolveTheme } = require('../theme');
     const { StyleSheet } = require('react-native');
     const darkTheme = resolveTheme('dark', 'dark');
@@ -141,7 +141,7 @@ describe('PauseMenu component', () => {
     const resumeTextDark = darkTree.root.findAllByType('Text').find((t) => t.props.children === 'Resume');
     const resumeStyleDark = StyleSheet.flatten(resumeTextDark.props.style);
     expect(resumeStyleDark.color).toBe(darkTheme.onAccent);
-    expect(resumeStyleDark.color).toBe('#0E1218');
+    expect(resumeStyleDark.color).toBe('#FFFFFF');
 
     // Light mode
     let lightTree;

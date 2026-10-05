@@ -15,7 +15,7 @@ import { useTheme } from '../theme';
  */
 
 /**
- * Segmented control with theme colors, radius 14, and touch targets >= 44pt.
+ * Segmented control drawn as separate pills (radius 14), touch targets >= 44pt.
  *
  * @param {Object} props
  * @param {SegmentedOption[]} props.options - List of options to display.
@@ -40,11 +40,7 @@ export default function Segmented({
     <View
       accessibilityRole="radiogroup"
       accessibilityLabel={accessibilityLabel}
-      style={[
-        styles.container,
-        { backgroundColor: theme.well },
-        style,
-      ]}
+      style={[styles.container, style]}
     >
       {options.map((opt) => {
         const item =
@@ -71,9 +67,10 @@ export default function Segmented({
             onPress={() => onChange?.(item.value)}
             style={({ pressed }) => [
               styles.segment,
+              { backgroundColor: theme.isDark ? theme.surface : theme.surfaceSunken },
               isSelected && [
                 styles.selectedSegment,
-                { backgroundColor: theme.accent },
+                { backgroundColor: theme.accent, shadowColor: theme.accent },
               ],
               {
                 opacity: pressed ? (isSelected ? 0.9 : 0.7) : 1,
@@ -110,23 +107,26 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
-    padding: 3,
-    minHeight: 50,
+    gap: 6,
     width: '100%',
   },
   segment: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 52,
     minWidth: 44,
-    borderRadius: 11,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
-  selectedSegment: {},
+  selectedSegment: {
+    elevation: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
   label: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
   },
   selectedLabel: {

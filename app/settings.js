@@ -1,9 +1,15 @@
-import React from 'react';
-import { StyleSheet, Text, View, Switch, ScrollView, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { Canvas, Rect, LinearGradient, vec } from '@shopify/react-native-skia';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/ui/theme';
 import { useSettings } from '../src/store/useSettings';
 import { useProgress } from '../src/store/useProgress';
 import Segmented from '../src/ui/components/Segmented';
+import ScreenHeader from '../src/ui/components/ScreenHeader';
+import Icon from '../src/ui/components/Icon';
+import PressableScale from '../src/ui/components/PressableScale';
+import Toggle from '../src/ui/components/Toggle';
 import levelsData from '../assets/levels/levels.json';
 
 const THEME_OPTIONS = [
@@ -24,8 +30,43 @@ const REDUCE_MOTION_OPTIONS = [
   { value: 'off', label: 'Off' },
 ];
 
+function ToggleRow({ icon, glaze, label, hint, value, onValueChange, theme }) {
+  const color = theme.glaze[glaze].base;
+  return (
+    <View style={styles.row}>
+      <View style={[styles.iconChip, { backgroundColor: `${color}22` }]}>
+        <Icon name={icon} size={30} color={color} solid />
+      </View>
+      <View style={styles.rowText}>
+        <Text style={[styles.rowLabel, { color: theme.ink }]}>{label}</Text>
+        <Text style={[styles.rowHint, { color: theme.inkMuted }]}>{hint}</Text>
+      </View>
+      <Toggle accessibilityLabel={label} value={value} onValueChange={onValueChange} />
+    </View>
+  );
+}
+
+function SegmentedGroup({ label, hint, options, value, onChange, theme }) {
+  return (
+    <View style={styles.group}>
+      <View>
+        <Text style={[styles.groupLabel, { color: theme.ink }]}>{label}</Text>
+        {hint ? <Text style={[styles.rowHint, { color: theme.inkMuted }]}>{hint}</Text> : null}
+      </View>
+      <Segmented
+        accessibilityLabel={label}
+        options={options}
+        value={value}
+        onChange={onChange}
+        theme={theme}
+      />
+    </View>
+  );
+}
+
 export default function SettingsScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const {
     sound,
     haptics,
@@ -43,136 +84,88 @@ export default function SettingsScreen() {
     setReduceMotion,
   } = useSettings();
   const unlockAllLevels = useProgress((state) => state.unlockAllLevels);
+  const [buttonSize, setButtonSize] = useState({ width: 0, height: 0 });
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.bg }]}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32 },
+      ]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.card, { backgroundColor: theme.surface }]}>
-        <Text style={[styles.title, { color: theme.ink }]}>Settings</Text>
+      <ScreenHeader title="Settings" subtitle="Customize your experience" art="settings" />
 
-        <View style={styles.switchRow}>
-          <Text style={[styles.label, { color: theme.ink }]}>Sound</Text>
-          <View style={styles.switchTarget}>
-            <Switch
-              accessibilityLabel="Sound"
-              value={sound}
-              onValueChange={setSound}
-              trackColor={{ false: theme.cellEmpty, true: theme.accent }}
-              thumbColor={theme.isDark && !sound ? theme.inkMuted : '#FFFFFF'}
-              ios_backgroundColor={theme.cellEmpty}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            />
-          </View>
-        </View>
-
-        <View style={styles.switchRow}>
-          <Text style={[styles.label, { color: theme.ink }]}>Music</Text>
-          <View style={styles.switchTarget}>
-            <Switch
-              accessibilityLabel="Music"
-              value={music}
-              onValueChange={setMusic}
-              trackColor={{ false: theme.cellEmpty, true: theme.accent }}
-              thumbColor={theme.isDark && !music ? theme.inkMuted : '#FFFFFF'}
-              ios_backgroundColor={theme.cellEmpty}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            />
-          </View>
-        </View>
-
-        {music ? (
-          <View style={styles.segmentedRow}>
-            <Text style={[styles.label, { color: theme.ink }]}>
-              Music volume
-            </Text>
-            <Segmented
-              accessibilityLabel="Music volume"
-              options={MUSIC_VOLUME_OPTIONS}
-              value={musicVolume}
-              onChange={setMusicVolume}
-              theme={theme}
-            />
-          </View>
-        ) : null}
-
-        <View style={styles.switchRow}>
-          <Text style={[styles.label, { color: theme.ink }]}>Haptics</Text>
-          <View style={styles.switchTarget}>
-            <Switch
-              accessibilityLabel="Haptics"
-              value={haptics}
-              onValueChange={setHaptics}
-              trackColor={{ false: theme.cellEmpty, true: theme.accent }}
-              thumbColor={theme.isDark && !haptics ? theme.inkMuted : '#FFFFFF'}
-              ios_backgroundColor={theme.cellEmpty}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            />
-          </View>
-        </View>
-
-        <View style={styles.switchRow}>
-          <Text style={[styles.label, { color: theme.ink }]}>
-            Colorblind mode
-          </Text>
-          <View style={styles.switchTarget}>
-            <Switch
-              accessibilityLabel="Colorblind mode"
-              value={colorblind}
-              onValueChange={setColorblind}
-              trackColor={{ false: theme.cellEmpty, true: theme.accent }}
-              thumbColor={theme.isDark && !colorblind ? theme.inkMuted : '#FFFFFF'}
-              ios_backgroundColor={theme.cellEmpty}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            />
-          </View>
-        </View>
-
-        <View style={styles.segmentedRow}>
-          <Text style={[styles.label, { color: theme.ink }]}>Theme</Text>
-          <Segmented
-            accessibilityLabel="Theme"
-            options={THEME_OPTIONS}
-            value={themeSetting}
-            onChange={setTheme}
-            theme={theme}
-          />
-        </View>
-
-        <View style={styles.segmentedRow}>
-          <Text style={[styles.label, { color: theme.ink }]}>
-            Reduce motion
-          </Text>
-          <Segmented
-            accessibilityLabel="Reduce motion"
-            options={REDUCE_MOTION_OPTIONS}
-            value={reduceMotion}
-            onChange={setReduceMotion}
-            theme={theme}
-          />
-        </View>
-
-        {typeof __DEV__ !== 'undefined' && __DEV__ ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Unlock all levels"
-            onPress={() => unlockAllLevels(levelsData.length)}
-            style={({ pressed }) => [
-              styles.devRow,
-              {
-                backgroundColor: theme.well,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Text style={[styles.label, { color: theme.ink }]}>
-              Unlock all levels
-            </Text>
-          </Pressable>
-        ) : null}
+      <View style={styles.rows}>
+        <ToggleRow icon="volume" glaze={0} label="Sound" hint="Sound effects" value={sound} onValueChange={setSound} theme={theme} />
+        <ToggleRow icon="music" glaze={5} label="Music" hint="Background music" value={music} onValueChange={setMusic} theme={theme} />
+        <ToggleRow icon="vibrate" glaze={4} label="Haptics" hint="Feel the blocks" value={haptics} onValueChange={setHaptics} theme={theme} />
+        <ToggleRow
+          icon="eye"
+          glaze={2}
+          label="Colorblind mode"
+          hint="Adds a shape to each color"
+          value={colorblind}
+          onValueChange={setColorblind}
+          theme={theme}
+        />
       </View>
+
+      {music ? (
+        <SegmentedGroup
+          label="Music volume"
+          options={MUSIC_VOLUME_OPTIONS}
+          value={musicVolume}
+          onChange={setMusicVolume}
+          theme={theme}
+        />
+      ) : null}
+
+      <SegmentedGroup
+        label="Theme"
+        options={THEME_OPTIONS}
+        value={themeSetting}
+        onChange={setTheme}
+        theme={theme}
+      />
+
+      <SegmentedGroup
+        label="Reduce motion"
+        hint="Minimize animations"
+        options={REDUCE_MOTION_OPTIONS}
+        value={reduceMotion}
+        onChange={setReduceMotion}
+        theme={theme}
+      />
+
+      {typeof __DEV__ !== 'undefined' && __DEV__ ? (
+        <PressableScale
+          accessibilityLabel="Unlock all levels"
+          onPress={() => unlockAllLevels(levelsData.length)}
+          containerStyle={styles.devButtonContainer}
+          style={[styles.devButton, { backgroundColor: theme.accent, shadowColor: theme.accent }]}
+        >
+          <View
+            style={StyleSheet.absoluteFill}
+            onLayout={(e) => setButtonSize(e.nativeEvent.layout)}
+          >
+            <Canvas style={StyleSheet.absoluteFill}>
+              <Rect x={0} y={0} width={buttonSize.width} height={buttonSize.height}>
+                <LinearGradient
+                  start={vec(0, 0)}
+                  end={vec(0, buttonSize.height)}
+                  colors={['rgba(255,255,255,0.18)', 'rgba(255,255,255,0)']}
+                />
+              </Rect>
+            </Canvas>
+          </View>
+          <Icon name="lock" size={20} color={theme.onAccent} solid />
+          <Text style={[styles.devButtonLabel, { color: theme.onAccent }]}>
+            Unlock all levels
+          </Text>
+        </PressableScale>
+      ) : null}
     </ScrollView>
   );
 }
@@ -181,50 +174,68 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  contentContainer: {
-    flexGrow: 1,
-    padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  card: {
-    padding: 24,
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 420,
-    gap: 16,
-  },
-  title: {
-    fontFamily: 'Unbounded_600SemiBold',
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 48,
-  },
-  segmentedRow: {
-    gap: 8,
-    width: '100%',
-  },
-  label: {
-    fontFamily: 'Figtree_500Medium',
-    fontSize: 16,
-  },
-  switchTarget: {
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  devRow: {
-    minHeight: 48,
-    paddingVertical: 12,
+  content: {
     paddingHorizontal: 16,
-    borderRadius: 14,
-    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 452,
+    alignSelf: 'center',
+    gap: 24,
+  },
+  rows: {
+    gap: 32,
+    marginTop: 8,
+  },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
+    minHeight: 56,
+  },
+  rowText: {
+    flex: 1,
+    gap: 2,
+  },
+  iconChip: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowLabel: {
+    fontFamily: 'Figtree_600SemiBold',
+    fontSize: 18,
+  },
+  rowHint: {
+    fontFamily: 'Figtree_400Regular',
+    fontSize: 14,
+  },
+  group: {
+    gap: 12,
+  },
+  groupLabel: {
+    fontFamily: 'Figtree_600SemiBold',
+    fontSize: 18,
+  },
+  devButtonContainer: {
+    marginTop: 16,
+  },
+  devButton: {
+    minHeight: 58,
+    borderRadius: 18,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  devButtonLabel: {
+    fontFamily: 'Figtree_600SemiBold',
+    fontSize: 18,
   },
 });

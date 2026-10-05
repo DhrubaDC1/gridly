@@ -86,6 +86,7 @@ jest.mock('@shopify/react-native-skia', () => {
     Line: (props) => React.createElement('Line', props),
     Path: (props) => React.createElement('Path', props),
     Shadow: (props) => React.createElement('Shadow', props),
+    BlurMask: (props) => React.createElement('BlurMask', props),
     Picture: (props) => React.createElement('Picture', props),
     Group: ({ children, ...props }) =>
       React.createElement('Group', props, children),

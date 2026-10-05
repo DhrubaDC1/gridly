@@ -36,9 +36,10 @@ describe('Phase 0 - Scaffold & Theme', () => {
         socketBottom: '#E8E2D7',
         ink: '#1B1F2A',
         inkMuted: '#5C6372',
-        accent: '#2E52CC',
+        accent: '#3751C8',
+        accentInk: '#3751C8',
         onAccent: '#FFFFFF',
-        accentSoft: '#DCE3F8',
+        accentSoft: '#DFE3F6',
         danger: '#C8372D',
         success: '#1E8A5F',
         star: '#F2B33D',
@@ -62,9 +63,10 @@ describe('Phase 0 - Scaffold & Theme', () => {
         socketBottom: '#222834',
         ink: '#ECEFF5',
         inkMuted: '#97A1B4',
-        accent: '#8EA8FF',
-        onAccent: '#0E1218',
-        accentSoft: '#1E2740',
+        accent: '#3751C8',
+        accentInk: '#8797DE',
+        onAccent: '#FFFFFF',
+        accentSoft: '#1F294E',
         danger: '#FF7A6E',
         success: '#4CD39A',
         star: '#FFC452',
@@ -162,7 +164,7 @@ describe('Phase 0 - Scaffold & Theme', () => {
       const explicitDark = resolveTheme('dark', 'light');
       expect(explicitDark.isDark).toBe(true);
       expect(explicitDark.bg).toBe(darkColors.bg);
-      expect(explicitDark.onAccent).toBe('#0E1218');
+      expect(explicitDark.onAccent).toBe('#FFFFFF');
     });
 
     it('exposes all tokens, blocks as base colors, and glaze with lockBase', () => {

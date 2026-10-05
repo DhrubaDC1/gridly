@@ -11,7 +11,7 @@ export default function LeaderboardsScreen() {
         <Text style={[styles.body, { color: theme.inkMuted }]}>
           Weekly and all-time global rankings for Classic and Blitz modes.
         </Text>
-        <Text style={[styles.status, { color: theme.accent }]}>
+        <Text style={[styles.status, { color: theme.accentInk }]}>
           Cloud leaderboards arriving in Phase 4.
         </Text>
       </View>

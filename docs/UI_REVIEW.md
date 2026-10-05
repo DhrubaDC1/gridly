@@ -132,7 +132,7 @@ Capture these after the P0 fixes land, especially Game Over.
 | well | `#CFC6B6` stone | `#0A0D12` |
 | cellEmpty | `#DCD5C8` | `#1A1F29` |
 | ink / inkMuted | `#1B1F2A` / `#5C6372` | `#ECEFF5` / `#97A1B4` |
-| accent / onAccent | `#2E52CC` / `#FFFFFF` | `#8EA8FF` / `#0E1218` |
+| accent / onAccent | `#3751C8` / `#FFFFFF` | `#3751C8` / `#FFFFFF` (text/outlines use `accentInk` `#8797DE`) |
 
 Glazes: Cobalt `#3D6FE0`, Jade `#2FA87A`, Persimmon `#F06A4D`, Saffron `#F2B33D`, Iris `#8B6CF0`, Lagoon `#1FB0C2`. Dark lifts are in §6.1.
 - **Type:** Unbounded 700 for the score and wordmark, 600 for titles, mode names, and big numbers. Figtree for everything else.

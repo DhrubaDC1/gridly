@@ -82,7 +82,7 @@ describe('HandHint component', () => {
     const darkTheme = resolveTheme('dark', 'dark');
     const lightTheme = resolveTheme('light', 'light');
 
-    // Dark mode: onAccent is #0E1218
+    // Dark mode: onAccent is #FFFFFF
     let darkTree;
     act(() => {
       darkTree = renderer.create(
@@ -97,12 +97,12 @@ describe('HandHint component', () => {
     const darkCircle = darkTree.root.findByProps({ testID: 'hand-hint' });
     const darkCircleStyle = StyleSheet.flatten(darkCircle.props.style);
     expect(darkCircleStyle.borderColor).toBe(darkTheme.onAccent);
-    expect(darkCircleStyle.borderColor).toBe('#0E1218');
+    expect(darkCircleStyle.borderColor).toBe('#FFFFFF');
 
     const darkInnerDot = darkTree.root.findByProps({ testID: 'hand-hint-dot' });
     const darkInnerDotStyle = StyleSheet.flatten(darkInnerDot.props.style);
     expect(darkInnerDotStyle.backgroundColor).toBe(darkTheme.onAccent);
-    expect(darkInnerDotStyle.backgroundColor).toBe('#0E1218');
+    expect(darkInnerDotStyle.backgroundColor).toBe('#FFFFFF');
 
     // Light mode: onAccent is #FFFFFF
     let lightTree;

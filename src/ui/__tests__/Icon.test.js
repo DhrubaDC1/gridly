@@ -21,6 +21,7 @@ jest.mock('@shopify/react-native-skia', () => {
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import icons, { icons as namedIcons } from '../icons';
+import iconsSolid from '../iconsSolid';
 import Icon, { parsedIcons } from '../components/Icon';
 
 const EXPECTED_ICON_NAMES = [
@@ -40,6 +41,9 @@ const EXPECTED_ICON_NAMES = [
   'timer',
   'map',
   'volume-2',
+  'music',
+  'clock',
+  'gamepad-2',
   'vibrate',
   'eye',
   'sparkles',
@@ -64,7 +68,7 @@ describe('Icon system', () => {
       expect(typeof icons).toBe('object');
     });
 
-    test('contains all 30 expected icon names', () => {
+    test('contains all 33 expected icon names', () => {
       for (const name of EXPECTED_ICON_NAMES) {
         expect(icons).toHaveProperty(name);
       }
@@ -94,7 +98,7 @@ describe('Icon system', () => {
     test('parses paths at module load with Skia.Path.MakeFromSVGString', () => {
       // Skia.Path.MakeFromSVGString should have been called for every path in the catalog
       let totalPaths = 0;
-      for (const list of Object.values(icons)) {
+      for (const list of [...Object.values(icons), ...Object.values(iconsSolid)]) {
         totalPaths += list.length;
       }
       const { Skia } = require('@shopify/react-native-skia');

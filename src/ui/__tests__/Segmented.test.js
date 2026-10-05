@@ -140,7 +140,7 @@ describe('Segmented component', () => {
     const selectedText = selectedButton.findByType('Text');
     const textStyle = StyleSheet.flatten(selectedText.props.style);
     expect(textStyle.color).toBe(darkTheme.onAccent);
-    expect(textStyle.color).toBe('#0E1218');
+    expect(textStyle.color).toBe('#FFFFFF');
 
     act(() => {
       tree.unmount();

@@ -262,7 +262,7 @@ export default function HomeScreen() {
             </View>
             <Pulse every={2800} to={1.07} style={styles.playWrap}>
               <View style={[styles.play, { backgroundColor: theme.surface }]}>
-                <Icon name="play" size={26} color={theme.accent} fill style={styles.playIcon} />
+                <Icon name="play" size={26} color={theme.accentInk} fill style={styles.playIcon} />
               </View>
             </Pulse>
           </PressableScale>

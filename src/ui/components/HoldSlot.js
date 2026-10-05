@@ -390,7 +390,7 @@ function HoldSlot({
             style={[
               styles.highlightOverlay,
               {
-                borderColor: activeTheme.accent,
+                borderColor: activeTheme.accentInk,
                 backgroundColor: activeTheme.accentSoft,
               },
               highlightAnimatedStyle,

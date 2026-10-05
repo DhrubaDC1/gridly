@@ -398,7 +398,8 @@ Light:
 | `cellEmpty` | `#DCD5C8` | empty cell (socket) |
 | `ink` | `#1B1F2A` | primary text |
 | `inkMuted` | `#5C6372` | secondary text |
-| `accent` | `#2E52CC` | primary buttons, focus |
+| `accent` | `#3751C8` | primary buttons, active tabs, selected states, highlights |
+| `accentInk` | `#3751C8` | accent as text or outline on `bg`/`surface` |
 | `onAccent` | `#FFFFFF` | text/icon on accent |
 | `danger` | `#C8372D` | low timer/moves, destructive actions |
 | `success` | `#1E8A5F` | timer bonus, completed goals |
@@ -419,8 +420,9 @@ Dark:
 | `cellEmpty` | `#1A1F29` |
 | `ink` | `#ECEFF5` |
 | `inkMuted` | `#97A1B4` |
-| `accent` | `#8EA8FF` |
-| `onAccent` | `#0E1218` |
+| `accent` | `#3751C8` (fills only; 2.8:1 on `bg`) |
+| `accentInk` | `#8797DE` |
+| `onAccent` | `#FFFFFF` |
 | `danger` | `#FF7A6E` |
 | `success` | `#4CD39A` |
 | `star` | `#FFC452` |
