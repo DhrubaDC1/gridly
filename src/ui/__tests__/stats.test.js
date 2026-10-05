@@ -1,6 +1,6 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import StatsScreen from '../../../app/stats';
+import StatsScreen from '../../../app/(tabs)/stats';
 import { useProgress } from '../../store/useProgress';
 
 jest.mock('expo-router', () => {

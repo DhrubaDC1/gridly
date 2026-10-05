@@ -53,6 +53,7 @@ eas build --profile production --platform ios    # App Store
 | Local persistence | `@react-native-async-storage/async-storage` |
 | Haptics / audio | `expo-haptics`, `expo-audio` |
 | Fonts | `expo-font`, `@expo-google-fonts/unbounded`, `@expo-google-fonts/figtree` |
+| Splash | `expo-splash-screen` |
 | Backend (phase 4) | `@supabase/supabase-js`, `react-native-url-polyfill`, `expo-apple-authentication` |
 | Tests | `jest`, `jest-expo` |
 
@@ -547,8 +548,8 @@ Work phase by phase. Finish, test, and commit each before starting the next. Pha
 - Requires a dev build for Apple auth.
 
 **Phase 5 — Release**
-- App icon: night-slate square (`#0E1218`) holding a 2×2 arrangement inside a debossed well — three glazed tiles (Cobalt top-left, Saffron top-right, Persimmon bottom-left) with sheen and glint, and an empty socket at bottom-right ("the move you're about to make"). Adaptive icon with `#0E1218` background, 1024px PNG for iOS.
-- Splash: `bg` per scheme (`#F4F1EC` / `#0E1218`) with the three-tile mark at 96dp (no text), fading into Home over 300ms matching brand mark placement.
+- App icon: night-slate square (`#0E1218`) holding the Home brand mark: the five glazed tiles from `BrandMark` (Jade, Cobalt, Persimmon, Saffron, Iris) at their Home positions and tilts, with lip, sheen and glint. Adaptive icon with `#0E1218` background (cluster inside the 66dp safe circle) plus a monochrome layer, 1024px PNG for iOS. Regenerate with `python3 scripts/gen-icon.py`.
+- Splash: `bg` per scheme (`#F4F1EC` / `#0E1218`) with the same five-tile mark at about 160dp (no text), held until fonts load, then fading into Home over 300ms with the Home brand mark in the same spot.
 - Store screenshots (dark): mid-game with glint wave and "×3", Home with Continue card, Adventure trail, Blitz board at 0:09 in `danger`, achievements grid. Short captions in Figtree 600.
 - `eas.json` with a `preview` profile (`android.buildType: "apk"`) and a `production` profile.
 - README (screenshots, build instructions, how to self-host Supabase), LICENSE (MIT), CREDITS.md, and a privacy policy page (GitHub Pages).

@@ -49,6 +49,7 @@ jest.mock('expo-router', () => {
   };
   return {
     Stack: StackComponent,
+    usePathname: () => '/',
     useRouter: () => ({
       back: jest.fn(),
       replace: jest.fn(),
@@ -93,7 +94,7 @@ describe('RootLayout _layout.js', () => {
     expect(headerLeftElement.type).toBe(BackButton);
 
     // Home screen has headerShown: false
-    const indexScreen = mockCapturedScreens.find((s) => s.name === 'index');
+    const indexScreen = mockCapturedScreens.find((s) => s.name === '(tabs)');
     expect(indexScreen).toBeDefined();
     expect(indexScreen.options.headerShown).toBe(false);
 

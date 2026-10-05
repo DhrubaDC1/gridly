@@ -2,15 +2,15 @@ import React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../src/ui/theme';
-import { useProgress } from '../src/store/useProgress';
+import { useTheme } from '../../src/ui/theme';
+import { useProgress } from '../../src/store/useProgress';
 import {
   formatPlayTime,
   formatNumber,
   formatAverageClassicScore,
   formatCombo,
   getTotalGamesPlayed,
-} from '../src/game/format';
+} from '../../src/game/format';
 
 function useSafeInsets() {
   try {

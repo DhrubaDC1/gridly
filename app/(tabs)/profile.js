@@ -1,18 +1,19 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '../src/ui/theme';
+import { useTheme } from '../../src/ui/theme';
 
-export default function LeaderboardsScreen() {
+export default function ProfileScreen() {
   const theme = useTheme();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <View style={[styles.card, { backgroundColor: theme.surface }]}>
-        <Text style={[styles.title, { color: theme.ink }]}>Leaderboards</Text>
+        <Text style={[styles.title, { color: theme.ink }]}>Profile</Text>
         <Text style={[styles.body, { color: theme.inkMuted }]}>
-          Weekly and all-time global rankings for Classic and Blitz modes.
+          Keep your progress safe across devices, link email or Apple ID, and
+          manage your player name.
         </Text>
         <Text style={[styles.status, { color: theme.accent }]}>
-          Cloud leaderboards arriving in Phase 4.
+          Account linking and cloud sync arriving in Phase 4.
         </Text>
       </View>
     </View>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
-import HomeScreen from '../../../app/index';
+import HomeScreen from '../../../app/(tabs)/index';
 import PauseMenu from '../components/PauseMenu';
 import GameOver from '../components/GameOver';
 import Segmented from '../components/Segmented';
@@ -20,6 +20,7 @@ jest.mock('expo-router', () => ({
     replace: jest.fn(),
     back: jest.fn(),
   }),
+  useIsFocused: () => true,
 }));
 
 jest.mock('react-native-reanimated', () => {
@@ -37,9 +38,13 @@ jest.mock('react-native-reanimated', () => {
     withTiming: (toValue) => toValue,
     withDelay: (_delay, anim) => anim,
     cancelAnimation: jest.fn(),
+    withSpring: (toValue) => toValue,
     Easing: {
       inOut: jest.fn(() => jest.fn()),
+      out: jest.fn(() => jest.fn()),
       cubic: jest.fn(),
+      quad: jest.fn(),
+      ease: jest.fn(),
     },
   };
 });

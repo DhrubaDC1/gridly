@@ -46,7 +46,7 @@ describe('SettingsScreen', () => {
     });
   });
 
-  test('renders switches for Sound, Haptics, and Colorblind mode with accessibility labels', () => {
+  test('renders switches for Sound, Music, Haptics, and Colorblind mode with accessibility labels', () => {
     let tree;
     act(() => {
       tree = renderer.create(<SettingsScreen />);
@@ -54,10 +54,11 @@ describe('SettingsScreen', () => {
 
     const root = tree.root;
     const switches = root.findAllByType(Switch);
-    expect(switches.length).toBe(3);
+    expect(switches.length).toBe(4);
 
     const labels = switches.map((s) => s.props.accessibilityLabel);
     expect(labels).toContain('Sound');
+    expect(labels).toContain('Music');
     expect(labels).toContain('Haptics');
     expect(labels).toContain('Colorblind mode');
 
@@ -102,7 +103,7 @@ describe('SettingsScreen', () => {
     });
   });
 
-  test('renders segmented controls for Theme and Reduce motion', () => {
+  test('renders segmented controls for Music volume, Theme and Reduce motion', () => {
     let tree;
     act(() => {
       tree = renderer.create(<SettingsScreen />);
@@ -110,10 +111,42 @@ describe('SettingsScreen', () => {
 
     const root = tree.root;
     const segmentedControls = root.findAllByType(Segmented);
-    expect(segmentedControls.length).toBe(2);
+    expect(segmentedControls.length).toBe(3);
 
-    expect(segmentedControls[0].props.accessibilityLabel).toBe('Theme');
-    expect(segmentedControls[1].props.accessibilityLabel).toBe('Reduce motion');
+    expect(segmentedControls[0].props.accessibilityLabel).toBe('Music volume');
+    expect(segmentedControls[1].props.accessibilityLabel).toBe('Theme');
+    expect(segmentedControls[2].props.accessibilityLabel).toBe('Reduce motion');
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  test('music switch hides volume and both persist in useSettings', () => {
+    let tree;
+    act(() => {
+      tree = renderer.create(<SettingsScreen />);
+    });
+
+    const root = tree.root;
+    const volume = root
+      .findAllByType(Segmented)
+      .find((s) => s.props.accessibilityLabel === 'Music volume');
+    act(() => {
+      volume.props.onChange(1);
+    });
+    expect(useSettings.getState().musicVolume).toBe(1);
+
+    const musicSwitch = root
+      .findAllByType(Switch)
+      .find((s) => s.props.accessibilityLabel === 'Music');
+    act(() => {
+      musicSwitch.props.onValueChange(false);
+    });
+    expect(useSettings.getState().music).toBe(false);
+    expect(
+      root.findAllByType(Segmented).some((s) => s.props.accessibilityLabel === 'Music volume')
+    ).toBe(false);
 
     act(() => {
       tree.unmount();

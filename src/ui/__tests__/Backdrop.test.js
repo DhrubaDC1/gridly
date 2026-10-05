@@ -70,7 +70,7 @@ describe('Backdrop component', () => {
     expect(Boolean(radialGrad)).toBe(true);
     expect(radialGrad.props.c.y).toBe(400);
     expect(radialGrad.props.colors[0]).toBe(lightTheme.spotlight);
-    expect(radialGrad.props.colors[1]).toBe('transparent');
+    expect(radialGrad.props.colors[1]).toBe(`${lightTheme.spotlight}00`);
 
     act(() => {
       tree.unmount();
@@ -107,7 +107,7 @@ describe('Backdrop component', () => {
 
     const radialGrad = tree.root.findByType('RadialGradient');
     expect(radialGrad.props.colors[0]).toBe(darkTheme.spotlight);
-    expect(radialGrad.props.colors[1]).toBe('transparent');
+    expect(radialGrad.props.colors[1]).toBe(`${darkTheme.spotlight}00`);
 
     act(() => {
       tree.unmount();

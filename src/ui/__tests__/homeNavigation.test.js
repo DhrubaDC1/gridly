@@ -1,6 +1,6 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import HomeScreen from '../../../app/index';
+import HomeScreen from '../../../app/(tabs)/index';
 import { useRouter } from 'expo-router';
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -17,58 +17,13 @@ jest.mock('expo-router', () => {
       replace: replaceMock,
       back: backMock,
     })),
+    useIsFocused: () => true,
   };
 });
 
 describe('HomeScreen navigation links', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  test('clicking Achievements link navigates to /achievements', () => {
-    let tree;
-    act(() => {
-      tree = renderer.create(<HomeScreen />);
-    });
-
-    const achBtn = tree.root.findByProps({
-      accessibilityLabel: 'View Achievements',
-    });
-    expect(achBtn).toBeDefined();
-
-    act(() => {
-      achBtn.props.onPress();
-    });
-
-    const router = useRouter();
-    expect(router.push).toHaveBeenCalledWith('/achievements');
-
-    act(() => {
-      tree.unmount();
-    });
-  });
-
-  test('clicking Stats link navigates to /stats', () => {
-    let tree;
-    act(() => {
-      tree = renderer.create(<HomeScreen />);
-    });
-
-    const statsBtn = tree.root.findByProps({
-      accessibilityLabel: 'View Stats',
-    });
-    expect(statsBtn).toBeDefined();
-
-    act(() => {
-      statsBtn.props.onPress();
-    });
-
-    const router = useRouter();
-    expect(router.push).toHaveBeenCalledWith('/stats');
-
-    act(() => {
-      tree.unmount();
-    });
   });
 
   test('clicking Play Blitz link navigates to /blitz', () => {

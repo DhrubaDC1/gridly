@@ -129,6 +129,16 @@ export const icons = {
     "M16 17h4",
     "M4 13h4",
   ],
+  "infinity": [
+    "M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8",
+  ],
+  "flag": [
+    "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z",
+    "M4 22v-7",
+  ],
+  "chevron-right": [
+    "m9 18 6-6-6-6",
+  ],
 };
 
 export default icons;
