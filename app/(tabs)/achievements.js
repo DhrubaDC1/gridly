@@ -2,10 +2,10 @@ import React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../src/ui/theme';
-import { useProgress } from '../src/store/useProgress';
-import { ACHIEVEMENTS } from '../src/engine/achievements';
-import { formatUnlockDate, formatDate } from '../src/game/format';
+import { useTheme } from '../../src/ui/theme';
+import { useProgress } from '../../src/store/useProgress';
+import { ACHIEVEMENTS } from '../../src/engine/achievements';
+import { formatUnlockDate, formatDate } from '../../src/game/format';
 
 function useSafeInsets() {
   try {

@@ -8,12 +8,23 @@ import {
   Unbounded_600SemiBold,
   Unbounded_700Bold,
 } from '@expo-google-fonts/unbounded';
-import { Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme } from '../src/ui/theme';
 import Toast from '../src/ui/components/Toast';
 import BackButton from '../src/ui/components/BackButton';
+import {
+  startBackgroundMusic,
+  setMusicTrack,
+  trackForPath,
+} from '../src/services/music';
+
+// Keep the native splash up until fonts are ready, then fade into Home.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.setOptions?.({ duration: 300, fade: true });
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -25,6 +36,15 @@ export default function RootLayout() {
   });
 
   const theme = useTheme();
+
+  // Mounted once at the root so screen re-renders never restart the track
+  useEffect(() => startBackgroundMusic(), []);
+  const pathname = usePathname();
+  useEffect(() => setMusicTrack(trackForPath(pathname)), [pathname]);
+
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded]);
 
   if (!fontsLoaded) {
     return null;
@@ -47,16 +67,12 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: theme.bg },
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="classic" options={{ title: 'Classic' }} />
         <Stack.Screen name="blitz" options={{ title: 'Blitz' }} />
         <Stack.Screen name="adventure/index" options={{ title: 'Adventure' }} />
         <Stack.Screen name="adventure/[level]" options={{ title: 'Adventure' }} />
-        <Stack.Screen name="leaderboards" options={{ title: 'Leaderboards' }} />
-        <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
-        <Stack.Screen name="stats" options={{ title: 'Stats' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-        <Stack.Screen name="profile" options={{ title: 'Profile' }} />
       </Stack>
       <Toast />
     </GestureHandlerRootView>

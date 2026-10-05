@@ -24,6 +24,7 @@ for (const [name, pathStrings] of Object.entries(icons)) {
  * @param {number} [props.size=24] - Size of the icon in dp (square)
  * @param {string} [props.color='#000000'] - Stroke/fill color
  * @param {number} [props.strokeWidth=2] - Stroke width for stroked icons
+ * @param {boolean} [props.fill=false] - Fill paths instead of stroking (star always fills)
  * @param {import('react-native').StyleProp<import('react-native').ViewStyle>} [props.style] - Optional wrapper style
  */
 export default function Icon({
@@ -31,6 +32,7 @@ export default function Icon({
   size = 24,
   color = '#000000',
   strokeWidth = 2,
+  fill = false,
   style,
 }) {
   const paths = parsedIcons[name];
@@ -39,7 +41,7 @@ export default function Icon({
   }
 
   const scale = size / 24;
-  const isStar = name === 'star';
+  const isStar = fill || name === 'star';
   const resolvedColor = color || '#000000';
 
   return (

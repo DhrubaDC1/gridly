@@ -64,7 +64,7 @@ function Backdrop({
           <RadialGradient
             c={makeVec(cx, cy)}
             r={radius}
-            colors={[theme.spotlight, 'transparent']}
+            colors={[theme.spotlight, `${theme.spotlight}00`]}
           />
         </Rect>
       </>

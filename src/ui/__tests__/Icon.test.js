@@ -51,6 +51,9 @@ const EXPECTED_ICON_NAMES = [
   'arrow-left-right',
   'gem',
   'footprints',
+  'infinity',
+  'flag',
+  'chevron-right',
 ];
 
 describe('Icon system', () => {
@@ -61,7 +64,7 @@ describe('Icon system', () => {
       expect(typeof icons).toBe('object');
     });
 
-    test('contains all 27 expected icon names', () => {
+    test('contains all 30 expected icon names', () => {
       for (const name of EXPECTED_ICON_NAMES) {
         expect(icons).toHaveProperty(name);
       }

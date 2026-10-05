@@ -223,6 +223,8 @@ describe('Phase 0 - Scaffold & Theme', () => {
       expect(DEFAULT_SETTINGS).toEqual({
         sound: true,
         haptics: true,
+        music: true,
+        musicVolume: 0.6,
         theme: 'system',
         colorblind: false,
         reduceMotion: 'system',

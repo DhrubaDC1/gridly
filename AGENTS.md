@@ -53,6 +53,7 @@ eas build --profile production --platform ios    # App Store
 | Local persistence | `@react-native-async-storage/async-storage` |
 | Haptics / audio | `expo-haptics`, `expo-audio` |
 | Fonts | `expo-font`, `@expo-google-fonts/unbounded`, `@expo-google-fonts/figtree` |
+| Splash | `expo-splash-screen` |
 | Backend (phase 4) | `@supabase/supabase-js`, `react-native-url-polyfill`, `expo-apple-authentication` |
 | Tests | `jest`, `jest-expo` |
 
@@ -64,17 +65,19 @@ Not used, on purpose: TypeScript, Redux, styled-components, Lottie, analytics SD
 
 ```
 app/                        # expo-router screens (thin: layout + wiring only)
-  _layout.js                # fonts, theme, gesture root, stack
-  index.js                  # Home
+  _layout.js                # fonts, theme, gesture root, stack, splash hide, music
+  (tabs)/                   # share one BottomNav; URLs unchanged (/, /stats, ...)
+    _layout.js              # Tabs with BottomNav as the custom tab bar
+    index.js                # Home
+    leaderboards.js
+    achievements.js
+    stats.js
+    profile.js              # name, link account, delete account
   classic.js
   blitz.js
   adventure/index.js        # level map
   adventure/[level].js      # play a level
-  leaderboards.js
-  achievements.js
-  stats.js
   settings.js
-  profile.js                # name, link account, delete account
 src/
   engine/                   # PURE JS. No React/Expo imports.
     rng.js                  # mulberry32 seeded RNG
@@ -94,21 +97,25 @@ src/
   ui/
     theme.js                # tokens from §9 (single source)
     components/             # Board, Piece, Tray, HoldSlot, ScoreTicker, ComboLabel,
-                            # Button, Card, Toast, Modal, StarRow
+                            # Button, Card, Toast, Modal, StarRow,
+                            # BrandMark (Home logo), BottomNav, PressableScale
   store/
     useSettings.js
     useProgress.js          # stats, achievements, adventure, in-progress game
   services/
     feedback.js             # haptics + sounds, reads settings
+    music.js                # background loop per screen family, reads settings
     supabase.js
     sync.js                 # cloud save merge
     leaderboard.js          # submit queue + fetch
 assets/
   levels/levels.json
   sounds/                   # CC0 only (e.g. Kenney.nl packs); list sources in CREDITS.md
+  audio/                    # background music: home.mp3, blitz.mp3, adventure.mp3 (credit in CREDITS.md)
 scripts/
   gen-levels.js             # generate candidate levels (seeded)
   verify-levels.js          # greedy bot playtests each level
+  gen-icon.py               # renders icon, adaptive layers, favicon, splash mark (Pillow)
 supabase/
   migrations/001_init.sql
   functions/submit-score/index.ts   # Edge Functions run on Deno; TS allowed ONLY here
@@ -262,7 +269,7 @@ That is 25 total. Names and descriptions live in one table with the ids above. U
 }
 ```
 
-Settings are stored separately in `useSettings`: `{ sound, haptics, theme: 'system'|'light'|'dark', colorblind, reduceMotion: 'system'|'on'|'off' }`.
+Settings are stored separately in `useSettings`: `{ sound, haptics, music, musicVolume: 0-1, theme: 'system'|'light'|'dark', colorblind, reduceMotion: 'system'|'on'|'off', seenOnboarding }`.
 
 ### Accounts, cloud save, leaderboards (phase 4)
 - On first launch, call `supabase.auth.signInAnonymously()` silently. Every player gets cloud save and leaderboards with no sign-in wall.
@@ -504,6 +511,7 @@ These are required and acceptance-tested by hand on a real device.
 | game over | `notificationAsync(Warning)` |
 
 - **Sound:** short, soft, CC0 tones. The clear sound's pitch rises by one step per combo level, capped at 6. Everything is preloaded at startup and stays silent when the device is on silent (iOS: respect silent mode).
+- **Background music** (`services/music.js`, started once in the root layout): one looping track per screen family — `home` (Home, Classic, menus), `blitz`, `adventure` — picked from the route. Switching screens pauses the old track and resumes it on return (no restarts, never two at once). Pauses when the app backgrounds. Music toggle and Low/Medium/High volume live in Settings.
 - **Onboarding:** the first Classic game ever starts from a scripted board where a single obvious drag clears a line within 3 seconds. A single hand-hint animation plays, with no text walls.
 - **Pause** freezes the Blitz timer. The app going to background auto-pauses and saves.
 
@@ -547,8 +555,8 @@ Work phase by phase. Finish, test, and commit each before starting the next. Pha
 - Requires a dev build for Apple auth.
 
 **Phase 5 — Release**
-- App icon: night-slate square (`#0E1218`) holding a 2×2 arrangement inside a debossed well — three glazed tiles (Cobalt top-left, Saffron top-right, Persimmon bottom-left) with sheen and glint, and an empty socket at bottom-right ("the move you're about to make"). Adaptive icon with `#0E1218` background, 1024px PNG for iOS.
-- Splash: `bg` per scheme (`#F4F1EC` / `#0E1218`) with the three-tile mark at 96dp (no text), fading into Home over 300ms matching brand mark placement.
+- App icon: night-slate square (`#0E1218`) holding the Home brand mark: the five glazed tiles from `BrandMark` (Jade, Cobalt, Persimmon, Saffron, Iris) at their Home positions and tilts, with lip, sheen and glint. Adaptive icon with `#0E1218` background (cluster inside the 66dp safe circle) plus a monochrome layer, 1024px PNG for iOS. Regenerate with `python3 scripts/gen-icon.py`.
+- Splash: `bg` per scheme (`#F4F1EC` / `#0E1218`) with the same five-tile mark at about 160dp (no text), held until fonts load, then fading into Home over 300ms with the Home brand mark in the same spot.
 - Store screenshots (dark): mid-game with glint wave and "×3", Home with Continue card, Adventure trail, Blitz board at 0:09 in `danger`, achievements grid. Short captions in Figtree 600.
 - `eas.json` with a `preview` profile (`android.buildType: "apk"`) and a `production` profile.
 - README (screenshots, build instructions, how to self-host Supabase), LICENSE (MIT), CREDITS.md, and a privacy policy page (GitHub Pages).

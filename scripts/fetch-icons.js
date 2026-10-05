@@ -29,6 +29,9 @@ const ICON_NAMES = [
   'arrow-left-right',
   'gem',
   'footprints',
+  'infinity',
+  'flag',
+  'chevron-right',
 ];
 
 // Fallback geometry drawn in 2px round-cap style on a 24x24 grid if download fails or icon is renamed.

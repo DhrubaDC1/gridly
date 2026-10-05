@@ -1,6 +1,6 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import AchievementsScreen from '../../../app/achievements';
+import AchievementsScreen from '../../../app/(tabs)/achievements';
 import { useProgress } from '../../store/useProgress';
 import { ACHIEVEMENTS } from '../../engine/achievements';
 

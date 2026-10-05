@@ -12,6 +12,12 @@ const THEME_OPTIONS = [
   { value: 'dark', label: 'Dark' },
 ];
 
+const MUSIC_VOLUME_OPTIONS = [
+  { value: 0.3, label: 'Low' },
+  { value: 0.6, label: 'Medium' },
+  { value: 1, label: 'High' },
+];
+
 const REDUCE_MOTION_OPTIONS = [
   { value: 'system', label: 'System' },
   { value: 'on', label: 'On' },
@@ -23,11 +29,15 @@ export default function SettingsScreen() {
   const {
     sound,
     haptics,
+    music,
+    musicVolume,
     theme: themeSetting,
     colorblind,
     reduceMotion,
     setSound,
     setHaptics,
+    setMusic,
+    setMusicVolume,
     setTheme,
     setColorblind,
     setReduceMotion,
@@ -57,6 +67,36 @@ export default function SettingsScreen() {
             />
           </View>
         </View>
+
+        <View style={styles.switchRow}>
+          <Text style={[styles.label, { color: theme.ink }]}>Music</Text>
+          <View style={styles.switchTarget}>
+            <Switch
+              accessibilityLabel="Music"
+              value={music}
+              onValueChange={setMusic}
+              trackColor={{ false: theme.cellEmpty, true: theme.accent }}
+              thumbColor={theme.isDark && !music ? theme.inkMuted : '#FFFFFF'}
+              ios_backgroundColor={theme.cellEmpty}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            />
+          </View>
+        </View>
+
+        {music ? (
+          <View style={styles.segmentedRow}>
+            <Text style={[styles.label, { color: theme.ink }]}>
+              Music volume
+            </Text>
+            <Segmented
+              accessibilityLabel="Music volume"
+              options={MUSIC_VOLUME_OPTIONS}
+              value={musicVolume}
+              onChange={setMusicVolume}
+              theme={theme}
+            />
+          </View>
+        ) : null}
 
         <View style={styles.switchRow}>
           <Text style={[styles.label, { color: theme.ink }]}>Haptics</Text>

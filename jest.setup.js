@@ -14,6 +14,12 @@ jest.mock('expo-audio', () => ({
   setIsAudioActiveAsync: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('expo-splash-screen', () => ({
+  preventAutoHideAsync: jest.fn(() => Promise.resolve()),
+  hideAsync: jest.fn(() => Promise.resolve()),
+  setOptions: jest.fn(),
+}));
+
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(() => Promise.resolve()),
   impactAsync: jest.fn(() => Promise.resolve()),
@@ -46,6 +52,9 @@ jest.mock('react-native-reanimated', () => {
       return toValue;
     },
     withRepeat: (anim) => anim,
+    withSpring: (toValue) => toValue,
+    withDelay: (_delay, anim) => anim,
+    cancelAnimation: () => {},
     withSequence: (...animations) => animations[animations.length - 1],
     runOnJS: (fn) => fn,
     Easing: {
