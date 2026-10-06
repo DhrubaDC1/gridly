@@ -40,3 +40,7 @@ yarn-error.*
 /ios
 /android
 docs/ui-audit/
+
+# build artifacts
+*.apk
+*.aab
